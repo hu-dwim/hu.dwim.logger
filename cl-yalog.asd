@@ -16,6 +16,7 @@
 
 (defsystem :cl-yalog
   :version "0.1"
+  :description "cl-yet-another-logger, based on the logging code from Arnesi"
   :author ("Attila Lendvai <attila.lendvai@gmail.com>"
 	   "Tamás Borbély <tomi.borbely@gmail.com>"
 	   "Levente Mészáros <levente.meszaros@gmail.com>")
@@ -30,15 +31,14 @@
             :components
             ((:file "package")
              (:file "duplicates" :depends-on ("package"))
-             (:file "yalog" :depends-on ("duplicates" "package"))))))
+             (:file "yalog" :depends-on ("duplicates" "package"))
+             (:file "appenders" :depends-on ("yalog"))))))
 
 (defsystem :cl-yalog-test
   :description "Tests for cl-yalog."
-  :default-component-class cl-source-file-with-readtable
-  :class system-with-readtable
-  :setup-readtable-function "cl-yalog::setup-readtable"
   :depends-on (:cl-yalog
                :stefil
+               :iterate
                :cl-def
                :cl-syntax-sugar
                )

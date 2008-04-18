@@ -11,8 +11,13 @@
         :alexandria
         :stefil
         :cl-def
+        :iterate
         :cl-syntax-sugar
         :cl-yalog
         )
   (:export
    #:test))
+
+(import
+ '()
+ :cl-yalog-test)
