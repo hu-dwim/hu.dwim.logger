@@ -124,8 +124,8 @@
             (loop for ancestor in (ancestors-of cat)
                minimize (compile-time-log-level ancestor))
             (error "Can't determine compile time level for ~S" cat))))
-  (:method compile-time-log-level ((cat-name symbol))
-           (compile-time-log-level (find-logger cat-name))))
+  (:method ((cat-name symbol))
+    (compile-time-log-level (find-logger cat-name))))
 
 (defgeneric (setf compile-time-log-level) (new-level category &optional recursive)
   (:method (new-level (cat log-category) &optional (recursive t))
