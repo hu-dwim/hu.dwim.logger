@@ -232,23 +232,26 @@
                                   `(handle-log-message (load-time-value (find-logger ',',name)) ,message-control ',',level)))
                            (values))
                          `(values)))))))
-      `(progn
-         (eval-when (:load-toplevel :execute)
-           (setf (find-logger ',name) (make-instance 'log-category
-                                                    :name ',name
-                                                    ,@(cond (level
-                                                             `(:level ,level))
-                                                            ((not ancestors)
-                                                             `(:level +debug+))
-                                                            (t '()))
-                                                    ,@(when compile-time-level
-                                                        `(:compile-time-level ,compile-time-level))
-                                                    :appenders (remove nil (list ,@appenders))
-                                                    :ancestors (list ,@ancestors))))
-         ,(make-log-helper '#:dribble '+dribble+)
-         ,(make-log-helper '#:debug '+debug+)
-         ,(make-log-helper '#:info '+info+)
-         ,(make-log-helper '#:warn '+warn+)
-         ,(make-log-helper '#:error '+error+)
-         ,(make-log-helper '#:fatal '+fatal+)
-        (values)))))
+      (with-unique-names (logger)
+        `(progn
+           (eval-when (:compile-toplevel :load-toplevel :execute)
+             (unless (find-logger ',name)
+               (setf (find-logger ',name) (make-instance 'log-category
+                                                         :name ',name
+                                                         ,@(when compile-time-level
+                                                             `(:compile-time-level ,compile-time-level))))))
+           (eval-when (:load-toplevel :execute)
+             (let ((,logger (find-logger ',name)))
+               ,(when level
+                  `(setf (level-of ,logger) ,level))
+               ,(when compile-time-level
+                  `(setf (compile-time-level-of ,logger) ,compile-time-level))
+               (setf (appenders-of ,logger) (remove nil (list ,@appenders)))
+               (setf (ancestors-of ,logger) (list ,@ancestors))))
+           ,(make-log-helper '#:dribble '+dribble+)
+           ,(make-log-helper '#:debug '+debug+)
+           ,(make-log-helper '#:info '+info+)
+           ,(make-log-helper '#:warn '+warn+)
+           ,(make-log-helper '#:error '+error+)
+           ,(make-log-helper '#:fatal '+fatal+)
+           (values))))))
