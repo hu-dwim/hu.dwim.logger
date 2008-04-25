@@ -6,8 +6,20 @@
 
 (cl:in-package :cl-user)
 
+;;; try to load asdf-system-connections
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (flet ((try (system)
+           (unless (asdf:find-system system nil)
+             (warn "Trying to install required dependency: ~S" system)
+             (when (find-package :asdf-install)
+               (funcall (read-from-string "asdf-install:install") system))
+             (unless (asdf:find-system system nil)
+               (error "The ~A system requires ~A." (or *compile-file-pathname* *load-pathname*) system)))
+           (asdf:operate 'asdf:load-op system)))
+    (try :asdf-system-connections)))
+
 (defpackage #:cl-yalog-system
-  (:use :cl :asdf)
+  (:use :cl :asdf :asdf-system-connections)
   (:export #:*load-as-production-p*))
 
 (in-package #:cl-yalog-system)
@@ -33,6 +45,12 @@
              (:file "duplicates" :depends-on ("package"))
              (:file "yalog" :depends-on ("duplicates" "package"))
              (:file "appenders" :depends-on ("yalog"))))))
+
+(defsystem-connection cl-yalog-and-bordeaux-threads
+  :requires (:cl-yalog :bordeaux-threads)
+  :components
+  ((:module "src"
+            :components ((:file "appenders-with-threading")))))
 
 (defsystem :cl-yalog-test
   :description "Tests for cl-yalog."

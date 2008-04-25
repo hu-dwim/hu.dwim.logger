@@ -36,6 +36,7 @@
    #:verbose-stream-log-appender
    #:make-stream-log-appender
    #:make-slime-repl-log-appender
+   #:*log-directory*
    #:file-log-appender
    #:make-file-log-appender
    ))

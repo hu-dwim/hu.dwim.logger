@@ -105,15 +105,18 @@
          :verbosity verbosity
          args))
 
+(defvar *log-directory*)
+
 (defclass file-log-appender (stream-log-appender)
-  ((log-file :initarg :log-file :accessor log-file
+  ((log-file :initarg :log-file :accessor log-file-of
              :documentation "Name of the file to write log messages to."))
   (:documentation "Logs to a file. the output of the file logger is not meant to be read directly by a human."))
 
 (defmethod append-message ((category log-category) (appender file-log-appender)
                            message level)
-  (with-open-file (log-file (log-file appender) :direction :output :if-exists :append :if-does-not-exist :create)
-    (format log-file "(~S ~D ~S ~S)~%" level (get-universal-time) (name-of category) message)))
+  (with-open-file (output (merge-pathnames (cl-yalog::log-file-of appender) *log-directory*)
+                          :direction :output :if-exists :append :if-does-not-exist :create)
+    (format output "(~S ~D ~S ~S)~%" level (get-universal-time) (name-of category) message)))
 
 (defun make-file-log-appender (file-name)
   (make-instance 'file-log-appender :log-file file-name))

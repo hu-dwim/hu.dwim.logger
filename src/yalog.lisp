@@ -92,8 +92,9 @@
   (:method ((cat log-category))
     (or (level-of cat)
         (if (ancestors-of cat)
-            (loop for ancestor in (ancestors-of cat)
-               minimize (log-level ancestor))
+            (loop
+               :for ancestor :in (ancestors-of cat)
+               :minimize (log-level ancestor))
             (error "Can't determine level for ~S" cat))))
   (:method ((cat-name symbol))
     (log-level (find-logger cat-name))))
