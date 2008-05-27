@@ -17,7 +17,7 @@
                 (machine-instance)
                 (sb-thread:thread-name sb-thread:*current-thread*)
                 level
-                (local-time:now)
+                (get-universal-time) ;;TODO ? (local-time:now)
                 (cl-yalog::name-of category)
                 message)))))
 
