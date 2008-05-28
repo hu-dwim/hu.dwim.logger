@@ -19,8 +19,12 @@
 
 (defparameter *log-categories* (make-hash-table :test 'eq))
 
-(defun find-logger (name)
-  (gethash name *log-categories*))
+(defun find-logger (name &optional (errorp t))
+  (let ((logger (gethash name *log-categories*)))
+    (when (and errorp
+               (null logger))
+      (error "Couldn't find a logger by the name ~S" name))
+    logger))
 
 (defun (setf find-logger) (logger name)
   (assert (typep logger 'log-category))
@@ -96,6 +100,8 @@
                :for ancestor :in (ancestors-of cat)
                :minimize (log-level ancestor))
             (error "Can't determine level for ~S" cat))))
+  (:method ((cat-name null))
+    (error "NIL is not a valid log category name"))
   (:method ((cat-name symbol))
     (log-level (find-logger cat-name))))
 
@@ -204,7 +210,7 @@
   (when appender
     (setf appenders (append appenders (list appender))))
   (let ((ancestors (mapcar (lambda (ancestor-name)
-                             `(or (find-logger ',ancestor-name)
+                             `(or (find-logger ',ancestor-name nil)
                                   (error "Attempt to define a sub logger of the undefined logger ~S."
                                          ',ancestor-name)))
                            ancestors)))
@@ -235,7 +241,7 @@
       (with-unique-names (logger)
         `(progn
            (eval-when (:compile-toplevel :load-toplevel :execute)
-             (unless (find-logger ',name)
+             (unless (find-logger ',name nil)
                (setf (find-logger ',name) (make-instance 'log-category
                                                          :name ',name
                                                          ,@(when compile-time-level
