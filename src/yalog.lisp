@@ -71,7 +71,7 @@
 
 #+nil
 (cl-def:def cl-def:print-object log-category
-    (format stream "~S" (name-of self)))
+    (format stream "~S" (name-of -self-)))
 
 (defmethod print-object ((self log-category) stream)
   (print-unreadable-object (self stream :type t :identity t)
