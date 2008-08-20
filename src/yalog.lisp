@@ -196,8 +196,12 @@
 (defgeneric append-message (category log-appender message level)
   (:method :around (category log-appender message level)
     ;; what else should we do?
-    (ignore-errors
-      (call-next-method))))
+    (multiple-value-bind (ok error)
+        (ignore-errors
+          (call-next-method)
+          t)
+      (unless ok
+        (warn "Error in cl-yalog::append-message: ~A" error)))))
 
 (defmacro deflogger (name ancestors &key compile-time-level level appender appenders documentation)
   (declare (ignore documentation)
