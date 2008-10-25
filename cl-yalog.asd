@@ -19,7 +19,7 @@
     (try :asdf-system-connections)))
 
 (defpackage #:cl-yalog-system
-  (:use :cl :asdf :asdf-system-connections)
+  (:use :cl :asdf)
   (:export #:*load-as-production-p*))
 
 (in-package #:cl-yalog-system)
