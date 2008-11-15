@@ -6,6 +6,4 @@
 
 (in-package :cl-yalog-test)
 
-(in-root-suite)
-
-(defsuite* test)
+(defsuite* (test :in root-suite))
