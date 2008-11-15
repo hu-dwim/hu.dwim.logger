@@ -27,17 +27,11 @@
   ((last-message-year :initform 0)
    (last-message-month :initform 0)
    (last-message-day :initform 0))
-  (:documentation "A subclass of stream-log-appender with minimal
-  'overhead' text in log messages. This amounts to: not printing
-  the package names of log categories and log levels and a more
-  compact printing of the current time."))
+  (:documentation "A subclass of stream-log-appender with minimal 'overhead' text in log messages. This amounts to: not printing the package names of log categories and log levels and a more compact printing of the current time."))
 
 (defclass verbose-stream-log-appender (stream-log-appender)
   ()
-  (:documentation "A subclass of stream-log-appender which
-  attempts to be as precise as possible, category names and log
-  level names are printed with a package prefix and the time is
-  printed in long format."))
+  (:documentation "A subclass of stream-log-appender which attempts to be as precise as possible, category names and log level names are printed with a package prefix and the time is printed in long format."))
 
 (defmethod append-message :around ((category log-category) (s stream-log-appender)
                                    message level)
