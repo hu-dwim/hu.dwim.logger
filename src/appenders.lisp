@@ -99,6 +99,9 @@
          :verbosity verbosity
          args))
 
+;;;;;;;;;;
+;;; file-log-appender
+
 (defvar *log-directory*)
 
 (defclass file-log-appender (stream-log-appender)
@@ -114,3 +117,22 @@
 
 (defun make-file-log-appender (file-name)
   (make-instance 'file-log-appender :log-file file-name))
+
+;;;;;;;;;;
+;;; level-filter-appender
+
+(defclass level-filter-appender (stream-log-appender)
+  ((minimum-level :initform +debug+ :initarg :minimum-level :accessor minimum-level-of)
+   (chained-appender :initarg :chained-appender :accessor chained-appender-of))
+  (:documentation "Drops messages below MINIMUM-LEVEL and forwards the others to CHAINED-APPENDER."))
+
+(defmethod append-message ((category log-category) (appender level-filter-appender)
+                           message level)
+  (when (>= (etypecase level
+              (number level)
+              (symbol (symbol-value level)))
+            (minimum-level-of appender))
+    (append-message category (chained-appender-of appender) message level)))
+
+(defun make-level-filter-appender (minimum-level chained-appender)
+  (make-instance 'level-filter-appender :minimum-level minimum-level :chained-appender chained-appender))

@@ -39,4 +39,5 @@
    #:*log-directory*
    #:file-log-appender
    #:make-file-log-appender
+   #:make-level-filter-appender
    ))
