@@ -14,6 +14,7 @@
   (:export
    #:find-logger
    #:log-category
+   #:log-appender
    #:deflogger
    #:with-logger-level
    #:log-level

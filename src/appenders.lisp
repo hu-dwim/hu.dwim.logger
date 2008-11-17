@@ -8,10 +8,10 @@
 
 ;;;; *** Stream log appender
 
-(defclass appender ()
+(defclass log-appender ()
   ((verbosity :initform 2 :initarg :verbosity :accessor verbosity-of)))
 
-(defclass stream-log-appender (appender)
+(defclass stream-log-appender (log-appender)
   ((stream :initarg :stream :accessor log-stream))
   (:documentation "Human readable to the console logger."))
 
@@ -111,7 +111,7 @@
 
 (defmethod append-message ((category log-category) (appender file-log-appender)
                            message level)
-  (with-open-file (output (merge-pathnames (cl-yalog::log-file-of appender) *log-directory*)
+  (with-open-file (output (merge-pathnames (log-file-of appender) *log-directory*)
                           :direction :output :if-exists :append :if-does-not-exist :create)
     (format output "(~S ~D ~S ~S)~%" level (get-universal-time) (name-of category) message)))
 
