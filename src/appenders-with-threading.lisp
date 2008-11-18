@@ -10,15 +10,15 @@
 (defmethod append-message ((category log-category) (appender thread-safe-file-log-appender) message level)
   ;; TODO implement buffering and flushing to lower contention. needs a timer.
   (bordeaux-threads:with-recursive-lock-held ((lock-of appender))
-    (with-open-file (log-file (merge-pathnames (cl-yalog::log-file-of appender) *log-directory*)
+    (with-open-file (log-file (merge-pathnames (log-file-of appender) *log-directory*)
                               :if-exists :append :if-does-not-exist :create :direction :output)
       (let ((*package* #.(find-package :cl-yalog)))
-        (format log-file "(~S ~S ~S ~A ~S ~S)~%"
+        (format log-file "(~S ~S ~A ~S ~S ~S)~%"
                 (machine-instance)
                 (sb-thread:thread-name sb-thread:*current-thread*)
+                (local-time:now)
+                (name-of category)
                 level
-                (get-universal-time) ;;TODO ? (local-time:now)
-                (cl-yalog::name-of category)
                 message)))))
 
 (defun make-thread-safe-file-log-appender (file-name)

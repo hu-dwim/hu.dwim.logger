@@ -49,17 +49,15 @@
       :report "Ignore all future messages to this logger."
       (setf (log-stream s) (make-broadcast-stream)))))
 
-(defmethod append-message ((category log-category) (s brief-stream-log-appender)
+(defmethod append-message ((category log-category) (appender brief-stream-log-appender)
                            message level)
-  (multiple-value-bind (second minute hour day month year)
-      (decode-universal-time (get-universal-time))
-    (declare (ignore second))
-    (with-slots (last-message-year last-message-month last-message-day)
-        s
+  (local-time:with-decoded-timestamp (:minute minute :hour hour :day day :month month :year year)
+      (local-time:now)
+    (with-slots (last-message-year last-message-month last-message-day) appender
       (unless (and (= year last-message-year)
                    (= month last-message-month)
                    (= day last-message-day))
-        (format (log-stream s) "--TIME MARK ~4,'0D-~2,'0D-~2,'0D--~%"
+        (format (log-stream appender) "--TIME MARK ~4,'0D-~2,'0D-~2,'0D--~%"
                 year month day)
         (setf last-message-year year
               last-message-month month
@@ -67,7 +65,7 @@
     (let* ((category-name (symbol-name (name-of category)))
            (level-name (symbol-name level))
            (category-length (length category-name)))
-      (format (log-stream s)
+      (format (log-stream appender)
               #.(concatenate 'string
                              "~2,'0D:~2,'0D ~"
                              (princ-to-string +max-category-name-length+)
@@ -78,17 +76,12 @@
                                 +max-category-name-length+))
                       category-length)
               (subseq level-name 1 (1- (length level-name)))))
-    (format (log-stream s) "~A~%" message)))
+    (format (log-stream appender) "~A~%" message)))
 
-(defmethod append-message ((category log-category) (s verbose-stream-log-appender)
-                            message level)
-  (multiple-value-bind (second minute hour date month year)
-      (decode-universal-time (get-universal-time))
-    (format (log-stream s)
-            "~4,'0D-~2,'0D-~2,'0DT~2,'0D:~2,'0D.~2,'0D ~S/~S: "
-            year month date hour minute second
-            (name-of category) level)
-    (format (log-stream s) "~A~%" message)))
+(defmethod append-message ((category log-category) (s verbose-stream-log-appender) message level)
+  (format (log-stream s)
+          "~A ~S ~S: ~A~%"
+          (local-time:now) (name-of category) level message))
 
 (defun make-stream-log-appender (&rest args &key (stream *debug-io*) (verbosity 2) &allow-other-keys)
   (remove-from-plistf args :stream :verbosity)
@@ -113,7 +106,7 @@
                            message level)
   (with-open-file (output (merge-pathnames (log-file-of appender) *log-directory*)
                           :direction :output :if-exists :append :if-does-not-exist :create)
-    (format output "(~S ~D ~S ~S)~%" level (get-universal-time) (name-of category) message)))
+    (format output "(~S ~A ~S ~S)~%" level (local-time:now) (name-of category) message)))
 
 (defun make-file-log-appender (file-name)
   (make-instance 'file-log-appender :log-file file-name))

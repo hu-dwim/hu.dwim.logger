@@ -37,6 +37,7 @@
 	       "Levente Mészáros <levente.meszaros@gmail.com>")
   :licence "BSD / Public domain"
   :depends-on (:alexandria
+               :local-time
                )
   :components
   ((:module "src"
