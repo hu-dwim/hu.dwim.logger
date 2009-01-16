@@ -13,7 +13,7 @@
     (with-open-file (log-file (merge-pathnames (log-file-of appender) *log-directory*)
                               :if-exists :append :if-does-not-exist :create :direction :output)
       (let ((*package* #.(find-package :cl-yalog)))
-        (format log-file "(~S ~S ~A ~S ~S ~S)~%"
+        (format log-file "(~S ~S @~A ~S ~S ~S)~%"
                 (machine-instance)
                 (sb-thread:thread-name sb-thread:*current-thread*)
                 (local-time:now)
