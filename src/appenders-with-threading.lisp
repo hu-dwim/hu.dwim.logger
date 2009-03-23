@@ -3,13 +3,13 @@
 (export '(make-thread-safe-file-log-appender thread-safe-file-log-appender) :cl-yalog)
 
 (defclass thread-safe-file-log-appender (file-log-appender)
-  ((lock :initform (bordeaux-threads:make-recursive-lock "thread-safe-file-log-appender")
+  ((lock :initform (bordeaux-threads:make-lock "thread-safe-file-log-appender")
          :accessor lock-of
          :initarg :lock)))
 
 (defmethod append-message ((category log-category) (appender thread-safe-file-log-appender) message level)
   ;; TODO implement buffering and flushing to lower contention. needs a timer.
-  (bordeaux-threads:with-recursive-lock-held ((lock-of appender))
+  (bordeaux-threads:with-lock-held ((lock-of appender))
     (with-open-file (log-file (merge-pathnames (log-file-of appender) *log-directory*)
                               :if-exists :append :if-does-not-exist :create :direction :output)
       (let ((*package* #.(find-package :cl-yalog)))

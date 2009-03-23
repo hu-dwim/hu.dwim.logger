@@ -84,6 +84,7 @@
           (local-time:now) (name-of category) level message))
 
 (defun make-stream-log-appender (&rest args &key (stream *debug-io*) (verbosity 2) &allow-other-keys)
+  (check-type verbosity number)
   (remove-from-plistf args :stream :verbosity)
   (apply #'make-instance (case verbosity
                            ((0 1) 'brief-stream-log-appender)
