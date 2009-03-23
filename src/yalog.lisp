@@ -19,12 +19,24 @@
 
 (defparameter *log-categories* (make-hash-table :test 'eq))
 
+(defun %find-logger (name &optional (errorp t))
+  (if (typep name 'log-category)
+      name
+      (let ((logger (gethash name *log-categories*)))
+        (when (and errorp
+                   (null logger))
+          (error "Couldn't find a logger by the name ~S" name))
+        logger)))
+
 (defun find-logger (name &optional (errorp t))
-  (let ((logger (gethash name *log-categories*)))
-    (when (and errorp
-               (null logger))
-      (error "Couldn't find a logger by the name ~S" name))
-    logger))
+  (%find-logger name errorp))
+
+(define-compiler-macro find-logger (&whole whole name &optional (errorp t))
+  (if (and (consp name)
+           (eq 'quote (first name))
+           (symbolp (second name)))
+      `(load-time-value (%find-logger ,name ,errorp))
+      whole))
 
 (defun (setf find-logger) (logger name)
   (assert (typep logger 'log-category))
