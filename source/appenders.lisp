@@ -117,8 +117,8 @@
 
 (defclass level-filter-appender (stream-log-appender)
   ((minimum-level :initform +debug+ :initarg :minimum-level :accessor minimum-level-of)
-   (chained-appender :initarg :chained-appender :accessor chained-appender-of))
-  (:documentation "Drops messages below MINIMUM-LEVEL and forwards the others to CHAINED-APPENDER."))
+   (chained-appenders :initarg :chained-appenders :accessor chained-appenders-of))
+  (:documentation "Drops messages below MINIMUM-LEVEL and forwards the others to CHAINED-APPENDERS."))
 
 (defmethod append-message ((category log-category) (appender level-filter-appender)
                            message level)
@@ -126,7 +126,8 @@
               (number level)
               (symbol (symbol-value level)))
             (minimum-level-of appender))
-    (append-message category (chained-appender-of appender) message level)))
+    (dolist (chained-appender (chained-appenders-of appender))
+      (append-message category chained-appender message level))))
 
-(defun make-level-filter-appender (minimum-level chained-appender)
-  (make-instance 'level-filter-appender :minimum-level minimum-level :chained-appender chained-appender))
+(defun make-level-filter-appender (minimum-level &rest chained-appenders)
+  (make-instance 'level-filter-appender :minimum-level minimum-level :chained-appenders chained-appenders))
