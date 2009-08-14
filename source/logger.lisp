@@ -1,10 +1,10 @@
 ;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
 ;;;
-;;; Copyright (c) 2007 by the authors.
+;;; Copyright (c) 2009 by the authors.
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :cl-yalog)
+(in-package :hu.dwim.logger)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defconstant +dribble+ 0)
@@ -82,7 +82,7 @@
        result)))
 
 #+nil
-(cl-def:def cl-def:print-object log-category
+(hu.dwim.def:def hu.dwim.def:print-object log-category
     (format stream "~S" (name-of -self-)))
 
 (defmethod print-object ((self log-category) stream)
@@ -213,7 +213,7 @@
           (call-next-method)
           t)
       (unless ok
-        (warn "Error in cl-yalog::append-message: ~A" error)))))
+        (warn "Error in :hu.dwim.logger::append-message: ~A" error)))))
 
 (defmacro deflogger (name ancestors &key compile-time-level level appender appenders documentation)
   (declare (ignore documentation)

@@ -1,10 +1,10 @@
 ;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
 ;;;
-;;; Copyright (c) 2007 by the authors.
+;;; Copyright (c) 2009 by the authors.
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :cl-yalog)
+(in-package :hu.dwim.logger)
 
 ;;;; *** Stream log appender
 
@@ -93,7 +93,7 @@
          :verbosity verbosity
          args))
 
-;;;;;;;;;;
+;;;;;;
 ;;; file-log-appender
 
 (defvar *log-directory*)
@@ -112,7 +112,7 @@
 (defun make-file-log-appender (file-name)
   (make-instance 'file-log-appender :log-file file-name))
 
-;;;;;;;;;;
+;;;;;;
 ;;; level-filter-appender
 
 (defclass level-filter-appender (stream-log-appender)

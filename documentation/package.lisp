@@ -6,9 +6,11 @@
 
 (in-package :common-lisp-user)
 
-(defpackage :hu.dwim.logger.test
+(defpackage :hu.dwim.logger.documentation
   (:use :hu.dwim.common-lisp
-        :hu.dwim.stefil
         :hu.dwim.def
+        :hu.dwim.defclass-star
+        :hu.dwim.logger
         :hu.dwim.syntax-sugar
-        :hu.dwim.logger))
+        :hu.dwim.util
+        :hu.dwim.wui))
