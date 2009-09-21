@@ -202,6 +202,7 @@
       (dolist (appender (appenders-of cat))
         (append-message cat appender message level))
       ;; send the message to our ancestors
+      ;; FIXME keep the original log-category when calling append-message eventually on the appenders
       (dolist (ancestor (ancestors-of cat))
         (handle-log-message ancestor message level))))
 
