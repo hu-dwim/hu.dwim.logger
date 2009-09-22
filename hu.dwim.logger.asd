@@ -18,7 +18,6 @@
   :depends-on (:alexandria
                :local-time)
   :components ((:module "source"
-                :components ((:file "package")
-                             (:file "duplicates" :depends-on ("package"))
-                             (:file "logger" :depends-on ("duplicates" "package"))
-                             (:file "appenders" :depends-on ("logger"))))))
+                :components ((:file "appenders" :depends-on ("logger"))
+                             (:file "logger" :depends-on ("package"))
+                             (:file "package")))))
