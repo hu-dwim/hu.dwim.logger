@@ -7,8 +7,7 @@
 (in-package :common-lisp-user)
 
 (defpackage :hu.dwim.logger
-  (:use :common-lisp
-        :alexandria)
+  (:use :hu.dwim.common-lisp)
 
   (:export #:find-logger
            #:log-category
