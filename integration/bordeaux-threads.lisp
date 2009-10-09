@@ -1,13 +1,18 @@
+;;; -*- mode: Lisp; Syntax: Common-Lisp; -*-
+;;;
+;;; Copyright (c) 2009 by the authors.
+;;;
+;;; See LICENCE for details.
+
 (in-package :hu.dwim.logger)
 
-(export '(make-thread-safe-file-log-appender thread-safe-file-log-appender) :hu.dwim.logger)
+;;;;;;
+;;; Thread safe file appender
 
-(defclass thread-safe-file-log-appender (file-log-appender)
-  ((lock :initform (bordeaux-threads:make-lock "thread-safe-file-log-appender")
-         :accessor lock-of
-         :initarg :lock)))
+(def (class* e) thread-safe-file-appender (file-appender)
+  ((lock (bordeaux-threads:make-lock "thread-safe-file-appender"))))
 
-(defmethod append-message ((category log-category) (appender thread-safe-file-log-appender) message level)
+(def method append-message ((logger logger) (appender thread-safe-file-appender) message level)
   ;; TODO implement buffering and flushing to lower contention. needs a timer.
   (bordeaux-threads:with-lock-held ((lock-of appender))
     (with-open-file (log-file (merge-pathnames (log-file-of appender) *log-directory*)
@@ -17,9 +22,9 @@
                 (machine-instance)
                 (sb-thread:thread-name sb-thread:*current-thread*)
                 (local-time:now)
-                (name-of category)
+                (name-of logger)
                 level
                 message)))))
 
-(defun make-thread-safe-file-log-appender (file-name)
-  (make-instance 'thread-safe-file-log-appender :log-file file-name))
+(def (function e) make-thread-safe-file-appender (file-name)
+  (make-instance 'thread-safe-file-appender :log-file file-name))

@@ -6,74 +6,78 @@
 
 (in-package :hu.dwim.logger)
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defconstant +dribble+ 0)
-  (defconstant +debug+   1)
-  (defconstant +info+    2)
-  (defconstant +warn+    3)
-  (defconstant +error+   4)
-  (defconstant +fatal+   5)
+;;;;;;
+;;; Default logger levels
 
-  (define-constant +max-category-name-length+ 12)
-  (define-constant +log-level-names+ #(+dribble+ +debug+ +info+ +warn+ +error+ +fatal+) :test #'equalp))
+(def (constant e) +dribble+ 0)
 
-(defparameter *log-categories* (make-hash-table :test 'eq))
+(def (constant e) +debug+   1)
 
-(defun %find-logger (name &optional (errorp t))
-  (if (typep name 'log-category)
+(def (constant e) +info+    2)
+
+(def (constant e) +warn+    3)
+
+(def (constant e) +error+   4)
+
+(def (constant e) +fatal+   5)
+
+(def (constant e) +log-level-names+ '(+dribble+ +debug+ +info+ +warn+ +error+ +fatal+))
+
+;;;;;;
+;;; Variables
+
+(def special-variable *loggers* (make-hash-table :test 'eq))
+
+(def (special-variable e) *default-runtime-level* (if *load-as-production?* +info+ +debug+))
+
+(def (special-variable e) *default-compile-time-level* (if *load-as-production?* +debug+ +dribble+))
+
+;;;;;;
+;;; Namespace
+
+(def function logger? (value)
+  (typep value 'logger))
+
+(def function %find-logger (name &optional (errorp t))
+  (if (logger? name)
       name
-      (let ((logger (gethash name *log-categories*)))
+      (let ((logger (gethash name *loggers*)))
         (when (and errorp
                    (null logger))
           (error "Couldn't find a logger by the name ~S" name))
         logger)))
 
-(defun find-logger (name &optional (errorp t))
+(def (function e) find-logger (name &optional (errorp t))
   (%find-logger name errorp))
 
-(define-compiler-macro find-logger (&whole whole name &optional (errorp t))
+(def compiler-macro find-logger (&whole whole name &optional (errorp t))
   (if (and (consp name)
            (eq 'quote (first name))
            (symbolp (second name)))
       `(load-time-value (%find-logger ,name ,errorp))
       whole))
 
-(defun (setf find-logger) (logger name)
-  (assert (typep logger 'log-category))
+(def function (setf find-logger) (logger name)
+  (assert (typep logger 'logger))
   (if logger
       (progn
-        (when (gethash name *log-categories*)
+        (when (gethash name *loggers*)
           (simple-style-warning "Redefining logger ~S" name))
-        (setf (gethash name *log-categories*) logger))
-      (remhash name *log-categories*)))
+        (setf (gethash name *loggers*) logger))
+      (remhash name *loggers*)))
 
-(defclass log-category ()
-  ((ancestors :initform ()
-              :accessor ancestors-of
-              :initarg :ancestors
-              :documentation "The log categories this category inherits from.")
-   (children :initform ()
-             :accessor children-of
-             :initarg :children
-             :documentation "The log categories which inherit from this category.")
-   (appenders :initform ()
-              :accessor appenders-of
-              :initarg :appenders
-              :documentation "A list of appender objects this category should send messages to.")
-   (level :initform nil
-          :initarg :level
-          :accessor level-of
-          :type (or null integer)
-          :documentation "This category's log level.")
-   (compile-time-level :initform +dribble+
-                       :initarg :compile-time-level
-                       :accessor compile-time-level-of
-                       :type integer
-                       :documentation "This category's compile time log level. Any log expression below this level will macro-expand to NIL.")
-   (name :initarg :name
-         :accessor name-of)))
+;;;;;;
+;;; Logger
 
-(defmethod make-load-form ((self log-category) &optional env)
+(def (class* e) logger ()
+  ((parents nil :documentation "The parent logger this logger inherits from.")
+   (children nil :documentation "The loggers which inherit from this logger.")
+   (appenders nil :documentation "A list of appender objects this logger should send messages to.")
+   (runtime-level *default-runtime-level* :type (or null integer) :documentation "This logger's log level.")
+   (compile-time-level *default-compile-time-level* :type integer :documentation "This logger's compile time log level. Any log expression below this level will macro-expand to NIL.")
+   (name)))
+
+(def method make-load-form ((self logger) &optional env)
   (declare (ignore env))
   (let ((name (name-of self)))
     `(let ((result (find-logger ',name)))
@@ -81,11 +85,7 @@
                                   name))
        result)))
 
-#+nil
-(hu.dwim.def:def hu.dwim.def:print-object log-category
-    (format stream "~S" (name-of -self-)))
-
-(defmethod print-object ((self log-category) stream)
+(def method print-object ((self logger) stream)
   (print-unreadable-object (self stream :type t :identity t)
     (let ((*standard-output* stream))
       (block printing
@@ -94,120 +94,132 @@
                                 (write-string "<<error printing object>>") (return-from printing))))
           (format stream "~S" (name-of self)))))))
 
-(defmethod shared-initialize :after ((self log-category) slot-names &key ancestors)
+(def method shared-initialize :after ((self logger) slot-names &key parents)
   (declare (ignore slot-names))
-  (dolist (ancestor ancestors)
-    (pushnew self (children-of ancestor) :test (lambda (a b)
-                                                 (eql (name-of a) (name-of b))))))
+  (dolist (parent parents)
+    (pushnew self (children-of parent) :test (lambda (a b)
+                                               (eql (name-of a) (name-of b))))))
 
-;;; Runtime levels
-(defun enabled-p (cat level)
-  (>= level (log-level cat)))
+;;;;;;
+;;; Runtime level
 
-(defgeneric log-level (category)
-  (:method ((cat log-category))
-    (or (level-of cat)
-        (if (ancestors-of cat)
+(def function enabled-p (logger level)
+  (>= level (log-level logger)))
+
+(def (generic e) log-level (logger)
+  (:method ((self logger))
+    (or (runtime-level-of self)
+        (if (parents-of self)
             (loop
-               :for ancestor :in (ancestors-of cat)
-               :minimize (log-level ancestor))
-            (error "Can't determine level for ~S" cat))))
-  (:method ((cat-name null))
-    (error "NIL is not a valid log category name"))
-  (:method ((cat-name symbol))
-    (log-level (find-logger cat-name))))
+               :for parent :in (parents-of self)
+               :minimize (log-level parent))
+            (error "Can't determine level for ~S" self))))
 
-(defgeneric (setf log-level) (new-level cat &optional recursive)
-  (:method (new-level (cat log-category)
-               &optional (recursive t))
-    "Change the log level of CAT to NEW-LEVEL. If RECUSIVE is T the setting is also applied to the sub categories of CAT."
-    (setf (slot-value cat 'level) new-level)
+  (:method ((self null))
+    (error "NIL is not a valid log logger name"))
+
+  (:method ((self symbol))
+    (log-level (find-logger self))))
+
+(def generic (setf log-level) (new-level self &optional recursive)
+  (:method (new-level (self logger) &optional (recursive t))
+    "Change the log level of LOGGER to NEW-LEVEL. If RECUSIVE is T the setting is also applied to the sub loggers of LOGGER."
+    (setf (slot-value self 'level) new-level)
     (when recursive
-      (dolist (child (children-of cat))
+      (dolist (child (children-of self))
         (setf (log-level child) new-level)))
     new-level)
-  (:method (new-level (cat-name symbol) &optional (recursive t))
-    (setf (log-level (find-logger cat-name) recursive) new-level))
-  (:method (new-level (cat-name null) &optional (recursive t))
-    (declare (ignore new-level cat-name recursive))
-    (error "NIL does not specify a category.")))
 
-;;; Compile time levels
-(defun compile-time-enabled-p (cat level)
-  (>= level (compile-time-log-level cat)))
+  (:method (new-level (self symbol) &optional (recursive t))
+    (setf (log-level (find-logger self) recursive) new-level))
 
-(defgeneric compile-time-log-level (category)
-  (:method ((cat log-category))
-    (or (compile-time-level-of cat)
-        (if (ancestors-of cat)
-            (loop for ancestor in (ancestors-of cat)
-               minimize (compile-time-log-level ancestor))
-            (error "Can't determine compile time level for ~S" cat))))
-  (:method ((cat-name symbol))
-    (compile-time-log-level (find-logger cat-name))))
+  (:method (new-level (self null) &optional (recursive t))
+    (declare (ignore new-level self recursive))
+    (error "NIL does not specify a logger.")))
 
-(defgeneric (setf compile-time-log-level) (new-level category &optional recursive)
-  (:method (new-level (cat log-category) &optional (recursive t))
-    "Change the compile time log level of CAT to NEW-LEVEL. If RECUSIVE is T the setting is also applied to the sub categories of CAT."
-    (setf (slot-value cat 'compile-time-level) new-level)
+;;;;;;
+;;; Compile time level
+
+(def function compile-time-enabled-p (logger level)
+  (>= level (compile-time-level logger)))
+
+(def (generic e) compile-time-level (logger)
+  (:method ((self logger))
+    (or (compile-time-level-of self)
+        (if (parents-of self)
+            (loop
+               :for parent :in (parents-of self)
+               :minimize (compile-time-level parent))
+            (error "Can't determine compile time level for ~S" self))))
+
+  (:method ((self symbol))
+    (compile-time-level (find-logger self))))
+
+(def generic (setf compile-time-level) (new-level logger &optional recursive)
+  (:method (new-level (self logger) &optional (recursive t))
+    "Change the compile time log level of LOGGER to NEW-LEVEL. If RECUSIVE is T the setting is also applied to the sub loggers of LOGGER."
+    (setf (slot-value self 'compile-time-level) new-level)
     (when recursive
-      (dolist (child (children-of cat))
-        (setf (compile-time-log-level child) new-level)))
+      (dolist (child (children-of self))
+        (setf (compile-time-level child) new-level)))
     new-level)
-  (:method (new-level (cat-name symbol) &optional (recursive t))
-    (setf (compile-time-log-level (find-logger cat-name) recursive) new-level))
-  (:method (new-level (cat-name null) &optional (recursive t))
-    (declare (ignore new-level cat-name recursive))
-    (error "NIL does not specify a category.")))
 
-(defmacro with-logger-level (logger-name new-level &body body)
+  (:method (new-level (self symbol) &optional (recursive t))
+    (setf (compile-time-level (find-logger self) recursive) new-level))
+
+  (:method (new-level (self null) &optional (recursive t))
+    (declare (ignore new-level self recursive))
+    (error "NIL does not specify a logger.")))
+
+(def (macro e) with-logger-level (logger-name new-level &body body)
   "Set the level of the listed logger(s) to NEW-LEVEL and restore the original value in an unwind-protect."
   (cond ((consp logger-name)
          `(with-logger-level ,(pop logger-name) ,new-level
-           ,(if logger-name
-                `(with-logger-level ,logger-name ,new-level
-                  ,@body)
-                `(progn
-                  ,@body))))
+            ,(if logger-name
+                 `(with-logger-level ,logger-name ,new-level
+                    ,@body)
+                 `(progn
+                    ,@body))))
         ((symbolp logger-name)
          (with-unique-names (logger old-level)
            `(let* ((,logger (find-logger ',logger-name))
-                   (,old-level (level-of ,logger)))
-             (setf (level-of ,logger) ,new-level)
-             (unwind-protect
-                  (progn ,@body)
-               (setf (level-of ,logger) ,old-level)))))
+                   (,old-level (runtime-level-of ,logger)))
+              (setf (runtime-level-of ,logger) ,new-level)
+              (unwind-protect
+                   (progn ,@body)
+                (setf (runtime-level-of ,logger) ,old-level)))))
         (t (error "Don't know how to interpret ~S as a logger name" logger-name))))
 
-;;;; ** Handling Messages
+;;;;;;
+;;; Handling messages
 
-(defmacro with-logging-io (&body body)
+(def macro with-logging-io (&body body)
   `(let ((*print-right-margin* most-positive-fixnum)
          (*print-readably* nil)
          (*print-length* 64)
          (*package* #.(find-package "COMMON-LISP")))
-    ,@body))
+     ,@body))
 
-(defgeneric handle-log-message (category message level)
-  (:documentation "Message is either a string or a list. When it's a list and the first element is a string then it's processed as args to cl:format."))
+(def (generic e) handle-log-message (logger message level)
+  (:documentation "Message is either a string or a list. When it's a list and the first element is a string then it's processed as args to cl:format.")
 
-(defmethod handle-log-message :around ((cat log-category) message level)
-  ;; turn off line wrapping for the entire time while inside the loggers
-  (with-logging-io
-    (call-next-method)))
+  (:method :around ((self logger) message level)
+    ;; turn off line wrapping for the entire time while inside the loggers
+    (with-logging-io
+      (call-next-method)))
 
-(defmethod handle-log-message ((cat log-category) message level)
-  (if (appenders-of cat)
-      ;; if we have any appenders send them the message
-      (dolist (appender (appenders-of cat))
-        (append-message cat appender message level))
-      ;; send the message to our ancestors
-      ;; FIXME keep the original log-category when calling append-message eventually on the appenders
-      (dolist (ancestor (ancestors-of cat))
-        (handle-log-message ancestor message level))))
+  (:method ((self logger) message level)
+    (if (appenders-of self)
+        ;; if we have any appenders send them the message
+        (dolist (appender (appenders-of self))
+          (append-message self appender message level))
+        ;; send the message to our parents
+        ;; FIXME keep the original logger when calling append-message eventually on the appenders
+        (dolist (parent (parents-of self))
+          (handle-log-message parent message level)))))
 
-(defgeneric append-message (category log-appender message level)
-  (:method :around (category log-appender message level)
+(def (generic e) append-message (logger appender message level)
+  (:method :around (logger appender message level)
     ;; what else should we do?
     (multiple-value-bind (ok error)
         (ignore-errors
@@ -216,7 +228,17 @@
       (unless ok
         (warn "Error in :hu.dwim.logger::append-message: ~A" error)))))
 
-(defmacro deflogger (name ancestors &key compile-time-level level appender appenders documentation)
+(def function collect-helper-names (loggern-name)
+  (flet ((make (suffix)
+           (format-symbol (symbol-package loggern-name) "~A.~A" (symbol-name loggern-name) (symbol-name suffix))))
+    (list (make '#:dribble)
+          (make '#:debug)
+          (make '#:info)
+          (make '#:warn)
+          (make '#:error)
+          (make '#:fatal))))
+
+(def (macro e) deflogger (name parents &key compile-time-level runtime-level appender appenders documentation)
   (declare (ignore documentation)
            (type symbol name))
   (unless (eq (symbol-package name) *package*)
@@ -226,51 +248,50 @@
                           (symbol-package name) *package*))
   (when appender
     (setf appenders (append appenders (list appender))))
-  (let ((ancestors (mapcar (lambda (ancestor-name)
-                             `(or (find-logger ',ancestor-name nil)
-                                  (error "Attempt to define a sub logger of the undefined logger ~S."
-                                         ',ancestor-name)))
-                           ancestors)))
-    (flet ((make-log-helper (suffix level)
-             (let ((logger-macro-name (intern (concatenate 'string (symbol-name name) "." (symbol-name suffix)))))
+  (let ((parents (or (mapcar (lambda (parent)
+                               `(or (find-logger ',parent nil)
+                                    (error "Attempt to define a sub logger of the undefined logger ~S." ',parent)))
+                             parents)
+                     (unless (eq name 'standard-logger)
+                       '((find-logger 'standard-logger))))))
+    (flet ((make-log-helper (suffix runtime-level)
+             (let ((logger-macro-name (format-symbol (symbol-package name) "~A.~A" (symbol-name name) (symbol-name suffix))))
                `(progn
-                 (setf (get ',logger-macro-name 'logger) ',name)
-                 (defmacro ,logger-macro-name (message-control &rest message-args)
-                     ;; first check at compile time
-                     (if (compile-time-enabled-p (find-logger ',name) ,level)
-                         ;; then check at runtime
-                         `(progn
-                           (when (enabled-p (load-time-value (find-logger ',',name)) ,',level)
+                  (setf (get ',logger-macro-name 'logger) ',name)
+                  (def macro ,logger-macro-name (message-control &rest message-args)
+                    ;; first check at compile time
+                    (if (compile-time-enabled-p (find-logger ',name) ,runtime-level)
+                        ;; then check at runtime
+                        `(progn
+                           (when (enabled-p (load-time-value (find-logger ',',name)) ,',runtime-level)
                              ;; this is problematic with call/cc (it has no multiple-value-prog1, yet)
                              #+nil(handler-case
                                       ,(if message-args
-                                           `(handle-log-message (find-logger ',',name) (list ,message-control ,@message-args)
-                                             ',',level)
-                                           `(handle-log-message (find-logger ',',name) ,message-control ',',level))
+                                           `(handle-log-message (find-logger ',',name) (list ,message-control ,@message-args) ',',runtime-level)
+                                           `(handle-log-message (find-logger ',',name) ,message-control ',',runtime-level))
                                     (serious-condition (error)
-                                                       (warn "Ignoring serious-condition ~A while logging message ~S" error ,message-control)))
+                                      (warn "Ignoring serious-condition ~A while logging message ~S" error ,message-control)))
                              ,(if message-args
-                                  `(handle-log-message (load-time-value (find-logger ',',name)) (list ,message-control ,@message-args)
-                                    ',',level)
-                                  `(handle-log-message (load-time-value (find-logger ',',name)) ,message-control ',',level)))
+                                  `(handle-log-message (load-time-value (find-logger ',',name)) (list ,message-control ,@message-args) ',',runtime-level)
+                                  `(handle-log-message (load-time-value (find-logger ',',name)) ,message-control ',',runtime-level)))
                            (values))
-                         `(values)))))))
+                        `(values)))))))
       (with-unique-names (logger)
         `(progn
            (eval-when (:compile-toplevel :load-toplevel :execute)
              (unless (find-logger ',name nil)
-               (setf (find-logger ',name) (make-instance 'log-category
+               (setf (find-logger ',name) (make-instance 'logger
                                                          :name ',name
                                                          ,@(when compile-time-level
-                                                             `(:compile-time-level ,compile-time-level))))))
+                                                                 `(:compile-time-level ,compile-time-level))))))
            (eval-when (:load-toplevel :execute)
              (let ((,logger (find-logger ',name)))
-               ,(when level
-                  `(setf (level-of ,logger) ,level))
+               ,(when runtime-level
+                      `(setf (runtime-level-of ,logger) ,runtime-level))
                ,(when compile-time-level
-                  `(setf (compile-time-level-of ,logger) ,compile-time-level))
+                      `(setf (compile-time-level-of ,logger) ,compile-time-level))
                (setf (appenders-of ,logger) (remove nil (list ,@appenders)))
-               (setf (ancestors-of ,logger) (list ,@ancestors))))
+               (setf (parents-of ,logger) (list ,@parents))))
            ,(make-log-helper '#:dribble '+dribble+)
            ,(make-log-helper '#:debug '+debug+)
            ,(make-log-helper '#:info '+info+)
@@ -278,3 +299,14 @@
            ,(make-log-helper '#:error '+error+)
            ,(make-log-helper '#:fatal '+fatal+)
            (values))))))
+
+(def (definer e :available-flags "e") logger (name parents &key compile-time-level runtime-level appender appenders documentation)
+  `(progn
+     (deflogger ,name ,parents
+       :runtime-level ,runtime-level
+       :compile-time-level ,compile-time-level
+       :appender ,appender
+       :appenders ,appenders
+       :documentation ,documentation)
+     ,@(when (getf -options- :export)
+             `((export ',(cons name (collect-helper-names name)))))))

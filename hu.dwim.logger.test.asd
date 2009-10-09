@@ -21,5 +21,4 @@
                :hu.dwim.syntax-sugar)
   :components ((:module "test"
                 :components ((:file "package")
-                             (:file "suite" :depends-on ("package"))
-                             (:file "simple" :depends-on ("suite"))))))
+                             (:file "suite" :depends-on ("package"))))))
