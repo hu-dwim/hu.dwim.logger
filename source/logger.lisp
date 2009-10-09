@@ -124,7 +124,7 @@
 (def generic (setf log-level) (new-level self &optional recursive)
   (:method (new-level (self logger) &optional (recursive t))
     "Change the log level of LOGGER to NEW-LEVEL. If RECUSIVE is T the setting is also applied to the sub loggers of LOGGER."
-    (setf (slot-value self 'level) new-level)
+    (setf (slot-value self 'runtime-level) new-level)
     (when recursive
       (dolist (child (children-of self))
         (setf (log-level child) new-level)))
