@@ -18,8 +18,8 @@
   :group 'applications)
 
 (defface font-lock-logger-expression-face
-   '((t (:inherit font-lock-comment-face)))
-   ;;'((((class color) (background light)) (:foreground "#aaa")))
+   ;;'((t (:inherit font-lock-comment-face)))
+   '((((class color) (background light)) (:foreground "#aaa")))
   "Face for the (foo-bar.debug ...) log statements."
   :group 'hu.dwim.logger.faces)
 
