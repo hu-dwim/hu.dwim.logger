@@ -9,7 +9,7 @@
 ;;;;;;
 ;;; Stream appender
 
-(def constant +max-logger-name-length+ 12)
+(def constant +max-logger-name-length+ 15)
 
 (def (class* e) appender ()
   ((verbosity 2)))
