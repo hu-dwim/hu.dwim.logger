@@ -7,6 +7,6 @@
 (in-package :hu.dwim.logger)
 
 ;;;;;;
-;;; standard-logger
+;;; Standard logger
 
 (def (logger e) standard-logger () :appenders ((debug-only* (make-instance 'brief-stream-appender :stream *debug-io*))))

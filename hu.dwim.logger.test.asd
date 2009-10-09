@@ -16,8 +16,7 @@
   :licence "BSD / Public domain"
   :description "Test suite for hu.dwim.logger"
   :depends-on (:hu.dwim.logger
-               :hu.dwim.def
-               :hu.dwim.stefil
+               :hu.dwim.def+hu.dwim.stefil
                :hu.dwim.syntax-sugar)
   :components ((:module "test"
                 :components ((:file "package")

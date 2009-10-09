@@ -94,7 +94,7 @@
          args))
 
 ;;;;;;
-;;; file-appender
+;;; File appender
 
 (def (special-variable e) *log-directory*)
 
@@ -111,7 +111,7 @@
   (make-instance 'file-appender :log-file file-name))
 
 ;;;;;;
-;;; level-filter-appender
+;;; Level filter appender
 
 (def (class* e) level-filter-appender (stream-appender)
   ((minimum-level +debug+)
