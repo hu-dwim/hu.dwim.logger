@@ -7,8 +7,8 @@
 (in-package :common-lisp-user)
 
 (defpackage :hu.dwim.logger.test
-  (:use :hu.dwim.common-lisp
-        :hu.dwim.stefil
+  (:use :hu.dwim.common
         :hu.dwim.def
+        :hu.dwim.stefil
         :hu.dwim.syntax-sugar
         :hu.dwim.logger))
