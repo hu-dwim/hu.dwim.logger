@@ -251,19 +251,19 @@
                              parents)
                      (unless (eq name 'standard-logger)
                        '((find-logger 'standard-logger))))))
-    (flet ((make-log-helper (suffix runtime-level)
+    (flet ((make-log-helper (suffix level)
              (let ((logger-macro-name (format-symbol (symbol-package name) "~A.~A" (symbol-name name) (symbol-name suffix))))
                `(progn
                   (setf (get ',logger-macro-name 'logger) ',name)
                   (def macro ,logger-macro-name (message-control &rest message-args)
                     ;; first check at compile time
-                    (if (compile-time-enabled-p (find-logger ',name) ,runtime-level)
+                    (if (compile-time-enabled-p (find-logger ',name) ,level)
                         ;; then check at runtime
                         `(progn
-                           (when (enabled-p (load-time-value (find-logger ',',name)) ,',runtime-level)
+                           (when (enabled-p (load-time-value (find-logger ',',name)) ,',level)
                              ,(if message-args
-                                  `(call-handle-log-message (load-time-value (find-logger ',',name)) (list ,message-control ,@message-args) ',',runtime-level)
-                                  `(call-handle-log-message (load-time-value (find-logger ',',name)) ,message-control ',',runtime-level)))
+                                  `(call-handle-log-message (load-time-value (find-logger ',',name)) (list ,message-control ,@message-args) ',',level)
+                                  `(call-handle-log-message (load-time-value (find-logger ',',name)) ,message-control ',',level)))
                            (values))
                         `(values)))))))
       (with-unique-names (logger)
