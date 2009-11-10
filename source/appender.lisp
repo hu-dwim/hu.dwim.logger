@@ -38,11 +38,11 @@
 (def method append-message :around ((logger logger) (s stream-appender) message level)
   (restart-case
       (call-next-method)
-    (use-*debug-io* ()
+    (use-debug-io ()
       :report "Use the current value of *debug-io*"
       (setf (stream-of s) *debug-io*)
       (append-message logger s message level))
-    (use-*standard-output* ()
+    (use-standard-output ()
       :report "Use the current value of *standard-output*"
       (setf (stream-of s) *standard-output*)
       (append-message logger s message level))
@@ -119,12 +119,12 @@
 ;;;;;;
 ;;; Level filter appender
 
-(def (class* e) level-filter-appender (stream-appender)
+(def (class* e) level-filtering-appender (stream-appender)
   ((minimum-level +debug+)
    (chained-appenders))
   (:documentation "Drops messages below MINIMUM-LEVEL and forwards the others to CHAINED-APPENDERS."))
 
-(def method append-message ((logger logger) (appender level-filter-appender) message level)
+(def method append-message ((logger logger) (appender level-filtering-appender) message level)
   (when (>= (etypecase level
               (number level)
               (symbol (symbol-value level)))
@@ -132,5 +132,5 @@
     (dolist (chained-appender (chained-appenders-of appender))
       (append-message logger chained-appender message level))))
 
-(def (function e) make-level-filter-appender (minimum-level &rest chained-appenders)
-  (make-instance 'level-filter-appender :minimum-level minimum-level :chained-appenders chained-appenders))
+(def (function e) make-level-filtering-appender (minimum-level &rest chained-appenders)
+  (make-instance 'level-filtering-appender :minimum-level minimum-level :chained-appenders chained-appenders))
