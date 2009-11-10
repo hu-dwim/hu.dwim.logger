@@ -62,7 +62,7 @@
         (setf last-message-year year
               last-message-month month
               last-message-day day)))
-    (let* ((logger-name (symbol-name (name-of logger)))
+    (bind ((logger-name (symbol-name (name-of *toplevel-logger*)))
            (level-name (symbol-name level))
            (logger-length (length logger-name)))
       (format (stream-of appender)
@@ -81,7 +81,7 @@
 (def method append-message ((logger logger) (s verbose-stream-appender) message level)
   (format (stream-of s)
           "~A ~S ~S: ~A~%"
-          (local-time:now) (name-of logger) level message))
+          (local-time:now) (name-of *toplevel-logger*) level message))
 
 (def (function e) make-stream-appender (&rest args &key (stream *debug-io*) (verbosity 2) &allow-other-keys)
   (check-type verbosity number)
@@ -111,7 +111,7 @@
 
 (def method append-message ((logger logger) (appender file-appender) message level)
   (with-output-to-file-appender-file (output appender)
-    (format output "(~S ~A ~S ~S)~%" level (local-time:now) (name-of logger) message)))
+    (format output "(~S ~A ~S ~S)~%" level (local-time:now) (name-of *toplevel-logger*) message)))
 
 (def (function e) make-file-appender (file-name)
   (make-instance 'file-appender :log-file file-name))

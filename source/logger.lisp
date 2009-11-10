@@ -200,33 +200,30 @@
          (*package* #.(find-package "COMMON-LISP")))
      ,@body))
 
+;; while inside HANDLE-LOG-MESSAGE it is bound to the toplevel logger
+(def special-variable *toplevel-logger*)
+
+(def function call-handle-log-message (logger message level)
+  (assert (not (boundp '*toplevel-logger*)))
+  (with-logging-io
+    (bind ((*toplevel-logger* logger))
+      (bind (((:values ok? error) (ignore-errors
+                                    (handle-log-message logger message level)
+                                    t)))
+        (unless ok?
+          (warn "Ignoring error comding from inside HANDLE-LOG-MESSAGE: ~A" error)))))
+  (values))
+
 (def (generic e) handle-log-message (logger message level)
   (:documentation "Message is either a string or a list. When it's a list and the first element is a string then it's processed as args to cl:format.")
-
-  (:method :around ((self logger) message level)
-    ;; turn off line wrapping for the entire time while inside the loggers
-    (with-logging-io
-      (call-next-method)))
-
   (:method ((self logger) message level)
-    (if (appenders-of self)
-        ;; if we have any appenders send them the message
-        (dolist (appender (appenders-of self))
-          (append-message self appender message level))
-        ;; send the message to our parents
-        ;; FIXME keep the original logger when calling append-message eventually on the appenders
-        (dolist (parent (parents-of self))
+    (if (appenders-of logger)
+        (dolist (appender (appenders-of logger))
+          (append-message logger appender message level))
+        (dolist (parent (parents-of logger))
           (handle-log-message parent message level)))))
 
-(def (generic e) append-message (logger appender message level)
-  (:method :around (logger appender message level)
-    ;; what else should we do?
-    (multiple-value-bind (ok error)
-        (ignore-errors
-          (call-next-method)
-          t)
-      (unless ok
-        (warn "Error in :hu.dwim.logger::append-message: ~A" error)))))
+(def (generic e) append-message (logger appender message level))
 
 (def function collect-helper-names (loggern-name)
   (flet ((make (suffix)
@@ -264,16 +261,9 @@
                         ;; then check at runtime
                         `(progn
                            (when (enabled-p (load-time-value (find-logger ',',name)) ,',runtime-level)
-                             ;; this is problematic with call/cc (it has no multiple-value-prog1, yet)
-                             #+nil(handler-case
-                                      ,(if message-args
-                                           `(handle-log-message (find-logger ',',name) (list ,message-control ,@message-args) ',',runtime-level)
-                                           `(handle-log-message (find-logger ',',name) ,message-control ',',runtime-level))
-                                    (serious-condition (error)
-                                      (warn "Ignoring serious-condition ~A while logging message ~S" error ,message-control)))
                              ,(if message-args
-                                  `(handle-log-message (load-time-value (find-logger ',',name)) (list ,message-control ,@message-args) ',',runtime-level)
-                                  `(handle-log-message (load-time-value (find-logger ',',name)) ,message-control ',',runtime-level)))
+                                  `(call-handle-log-message (load-time-value (find-logger ',',name)) (list ,message-control ,@message-args) ',',runtime-level)
+                                  `(call-handle-log-message (load-time-value (find-logger ',',name)) ,message-control ',',runtime-level)))
                            (values))
                         `(values)))))))
       (with-unique-names (logger)

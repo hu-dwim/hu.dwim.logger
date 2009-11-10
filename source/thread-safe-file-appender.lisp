@@ -64,7 +64,7 @@
                                     (machine-instance)
                                     (sb-thread:thread-name sb-thread:*current-thread*)
                                     (local-time:now)
-                                    (name-of logger)
+                                    (name-of *toplevel-logger*)
                                     level
                                     message))
                           cache))))
