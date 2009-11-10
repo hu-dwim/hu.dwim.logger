@@ -28,8 +28,6 @@
 
 (def special-variable *loggers* (make-hash-table :test 'eq))
 
-(def (special-variable e) *default-runtime-level* (if *load-as-production?* +info+ +debug+))
-
 (def (special-variable e) *default-compile-time-level* (if *load-as-production?* +debug+ +dribble+))
 
 ;;;;;;
@@ -73,8 +71,8 @@
   ((parents nil :documentation "The parent logger this logger inherits from.")
    (children nil :documentation "The loggers which inherit from this logger.")
    (appenders nil :documentation "A list of appender objects this logger should send messages to.")
-   (runtime-level *default-runtime-level* :type (or null integer) :documentation "This logger's log level.")
-   (compile-time-level *default-compile-time-level* :type integer :documentation "This logger's compile time log level. Any log expression below this level will macro-expand to NIL.")
+   (runtime-level nil :type (or null integer) :documentation "The runtime log level determines whether an actual log message shows up at runtime.")
+   (compile-time-level *default-compile-time-level* :type integer :documentation "The compile time log level is a compile time filter. Log expressions below this level will macro-expand to NIL at compile time.")
    (name)))
 
 (def method make-load-form ((self logger) &optional env)
@@ -103,7 +101,7 @@
 ;;;;;;
 ;;; Runtime level
 
-(def function enabled-p (logger level)
+(def function at-runtime-enabled? (logger level)
   (>= level (log-level logger)))
 
 (def (generic e) log-level (logger)
@@ -140,7 +138,7 @@
 ;;;;;;
 ;;; Compile time level
 
-(def function compile-time-enabled-p (logger level)
+(def function at-compile-time-enabled? (logger level)
   (>= level (compile-time-level logger)))
 
 (def (generic e) compile-time-level (logger)
@@ -217,10 +215,10 @@
 (def (generic e) handle-log-message (logger message level)
   (:documentation "Message is either a string or a list. When it's a list and the first element is a string then it's processed as args to cl:format.")
   (:method ((self logger) message level)
-    (if (appenders-of logger)
-        (dolist (appender (appenders-of logger))
-          (append-message logger appender message level))
-        (dolist (parent (parents-of logger))
+    (if (appenders-of self)
+        (dolist (appender (appenders-of self))
+          (append-message self appender message level))
+        (dolist (parent (parents-of self))
           (handle-log-message parent message level)))))
 
 (def (generic e) append-message (logger appender message level))
@@ -257,14 +255,15 @@
                   (setf (get ',logger-macro-name 'logger) ',name)
                   (def macro ,logger-macro-name (message-control &rest message-args)
                     ;; first check at compile time
-                    (if (compile-time-enabled-p (find-logger ',name) ,level)
+                    (if (at-compile-time-enabled? (find-logger ',name) ,level)
                         ;; then check at runtime
-                        `(progn
-                           (when (enabled-p (load-time-value (find-logger ',',name)) ,',level)
-                             ,(if message-args
-                                  `(call-handle-log-message (load-time-value (find-logger ',',name)) (list ,message-control ,@message-args) ',',level)
-                                  `(call-handle-log-message (load-time-value (find-logger ',',name)) ,message-control ',',level)))
-                           (values))
+                        (with-unique-names (logger)
+                          `(bind ((,logger (load-time-value (find-logger ',',name))))
+                             (when (at-runtime-enabled? ,logger ,',level)
+                               ,(if message-args
+                                    `(call-handle-log-message ,logger (list ,message-control ,@message-args) ',',level)
+                                    `(call-handle-log-message ,logger ,message-control ',',level)))
+                             (values)))
                         `(values)))))))
       (with-unique-names (logger)
         `(progn
