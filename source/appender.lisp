@@ -102,9 +102,15 @@
   ((log-file :documentation "Name of the file to write log messages to."))
   (:documentation "Logs to a file. The output of the file logger is not meant to be read directly by a human."))
 
+(def function file-appender-output-file (appender)
+  (merge-pathnames (log-file-of appender) *log-directory*))
+
+(def macro with-output-to-file-appender-file ((stream appender) &body body)
+  `(with-open-file (,stream (file-appender-output-file ,appender) :direction :output :if-exists :append :if-does-not-exist :create)
+     ,@body))
+
 (def method append-message ((logger logger) (appender file-appender) message level)
-  (with-open-file (output (merge-pathnames (log-file-of appender) *log-directory*)
-                          :direction :output :if-exists :append :if-does-not-exist :create)
+  (with-output-to-file-appender-file (output appender)
     (format output "(~S ~A ~S ~S)~%" level (local-time:now) (name-of logger) message)))
 
 (def (function e) make-file-appender (file-name)
