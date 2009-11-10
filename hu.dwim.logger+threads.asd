@@ -8,7 +8,7 @@
 
 (in-package :hu.dwim.asdf)
 
-(defsystem :hu.dwim.logger+bordeaux-threads+trivial-garbage
+(defsystem :hu.dwim.logger+threads
   :class hu.dwim.system
   :author ("Attila Lendvai <attila.lendvai@gmail.com>"
            "Tamás Borbély <tomi.borbely@gmail.com>"
@@ -16,6 +16,8 @@
   :licence "BSD / Public domain"
   :depends-on (:bordeaux-threads
                :hu.dwim.logger
+               :iolib.os
                :trivial-garbage)
   :components ((:module "source"
-                :components ((:file "thread-safe-file-appender")))))
+                :components ((:file "caching-appender")
+                             (:file "thread-safe-file-appender" :depends-on ("caching-appender"))))))
