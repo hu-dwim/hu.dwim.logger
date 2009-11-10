@@ -66,7 +66,8 @@
   (with-lock-held-on-caching-appender appender
     (bind ((cache (cache-of appender)))
       (when (>= (length cache) (array-dimension cache 0))
-        (flush-caching-appender appender))
-      (assert (zerop (length cache))) ; we still have the lock, it must be empty
+        (flush-caching-appender appender)
+        ;; we have the lock, it must be empty
+        (assert (zerop (length cache))))
       (vector-push-extend (format-caching-appender-message logger appender message level) cache))))
 
