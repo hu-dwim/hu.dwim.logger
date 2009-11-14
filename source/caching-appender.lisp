@@ -32,6 +32,9 @@
   (bordeaux-threads:with-recursive-lock-held ((lock-of appender))
     (-body-)))
 
+(def method flush-caching-appender-messages :after ((appender caching-appender) lines)
+  (setf (last-flushed-at-of appender) (get-monotonic-time)))
+
 (def (function e) flush-caching-appenders ()
   (loop
     :for appender :being :the :hash-keys :of *caching-appenders*
@@ -40,16 +43,20 @@
 (def (function e) flush-caching-appender (appender)
   (bind ((lines nil)
          (flushed? nil)) ; TODO #f
-    (with-lock-held-on-caching-appender appender
-      (bind ((cache (cache-of appender)))
-        (setf lines (make-array (length cache) :initial-contents cache))
-        (setf (fill-pointer cache) 0))
-      (setf (last-flushed-at-of appender) (get-monotonic-time))
-      (unless (async-flushing? appender)
-        (setf flushed? t)
-        (flush-caching-appender-messages appender lines)))
-    (unless flushed?
-      (flush-caching-appender-messages appender lines)))
+    (flet ((ensure-flushed ()
+             (when (and lines
+                        (not flushed?))
+               (setf flushed? t)
+               (flush-caching-appender-messages appender lines))))
+      (with-lock-held-on-caching-appender appender
+        (bind ((cache (cache-of appender))
+               (cache-size (length cache)))
+          (unless (zerop cache-size)
+            (setf lines (make-array cache-size :initial-contents cache))
+            (setf (fill-pointer cache) 0)))
+        (unless (async-flushing? appender)
+          (ensure-flushed)))
+      (ensure-flushed)))
   (values))
 
 (def method format-caching-appender-message ((logger logger) (appender caching-appender) message level)
