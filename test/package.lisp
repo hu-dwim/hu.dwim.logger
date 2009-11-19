@@ -10,5 +10,4 @@
   (:use :hu.dwim.common
         :hu.dwim.def
         :hu.dwim.stefil
-        :hu.dwim.syntax-sugar
         :hu.dwim.logger))

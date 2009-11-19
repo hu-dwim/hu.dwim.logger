@@ -10,14 +10,9 @@
 
 (defsystem :hu.dwim.logger.test
   :class hu.dwim.test-system
-  :author ("Attila Lendvai <attila.lendvai@gmail.com>"
-           "Levente Mészáros <levente.meszaros@gmail.com>"
-           "Tamás Borbély <tomi.borbely@gmail.com>")
-  :licence "BSD / Public domain"
   :description "Test suite for hu.dwim.logger"
   :depends-on (:hu.dwim.logger
-               :hu.dwim.def+hu.dwim.stefil
-               :hu.dwim.syntax-sugar)
+               :hu.dwim.util.test)
   :components ((:module "test"
                 :components ((:file "package")
                              (:file "suite" :depends-on ("package"))))))

@@ -4,11 +4,10 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :common-lisp-user)
+(in-package :hu.dwim.util)
 
-(defpackage :hu.dwim.logger
+(def package :hu.dwim.logger
   (:use :hu.dwim.asdf
         :hu.dwim.common
-        :hu.dwim.def
-        :hu.dwim.defclass-star
-        :hu.dwim.syntax-sugar))
+        :hu.dwim.def)
+  (:readtable-setup (enable-standard-hu.dwim-syntaxes)))

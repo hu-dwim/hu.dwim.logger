@@ -15,7 +15,9 @@
            "Tamás Borbély <tomi.borbely@gmail.com>")
   :licence "BSD / Public domain"
   :description "Logger"
-  :depends-on (:hu.dwim.defclass-star+hu.dwim.def
+  :depends-on (:hu.dwim.def+hu.dwim.common
+               :hu.dwim.defclass-star+hu.dwim.def
+               :hu.dwim.util
                :local-time)
   :components ((:module "source"
                 :components ((:file "appender" :depends-on ("logger"))
