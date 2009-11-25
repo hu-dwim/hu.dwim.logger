@@ -20,13 +20,13 @@
 (def special-variable *caching-appenders* (trivial-garbage:make-weak-hash-table :weakness :key))
 
 (def (class* e) caching-appender ()
-  ((lock (bordeaux-threads:make-lock "a caching-appender"))
+  ((lock (bordeaux-threads:make-lock "a caching-appender of hu.dwim.logger"))
    (last-flushed-at (get-monotonic-time))
-   (cache (make-array +caching-appender/maximum-cache-size+ :adjustable t :fill-pointer 0))
-   (async-flushing nil :accessor async-flushing? :type boolean)))
+   (cache (make-array +caching-appender/maximum-cache-size+ :adjustable #t :fill-pointer 0))
+   (async-flushing #f :accessor async-flushing? :type boolean)))
 
 (def constructor caching-appender
-  (setf (gethash -self- *caching-appenders*) t))
+  (setf (gethash -self- *caching-appenders*) #t))
 
 (def with-macro with-lock-held-on-caching-appender (appender)
   (bordeaux-threads:with-recursive-lock-held ((lock-of appender))
@@ -42,11 +42,11 @@
 
 (def (function e) flush-caching-appender (appender)
   (bind ((lines nil)
-         (flushed? nil)) ; TODO #f
+         (flushed? #f))
     (flet ((ensure-flushed ()
              (when (and lines
                         (not flushed?))
-               (setf flushed? t)
+               (setf flushed? #t)
                (flush-caching-appender-messages appender lines))))
       (with-lock-held-on-caching-appender appender
         (bind ((cache (cache-of appender))
@@ -77,4 +77,3 @@
         ;; we have the lock, it must be empty
         (assert (zerop (length cache))))
       (vector-push-extend (format-caching-appender-message logger appender message level) cache))))
-

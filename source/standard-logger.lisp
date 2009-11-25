@@ -11,4 +11,4 @@
 
 (def (logger e) standard-logger ()
   :runtime-level (if *load-as-production?* +info+ +debug+)
-  :appenders ((debug-only* (make-instance 'brief-stream-appender :stream *debug-io*))))
+  :appenders ((debug-only* (make-instance 'brief-stream-appender))))

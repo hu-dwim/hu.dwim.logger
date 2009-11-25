@@ -10,18 +10,13 @@
 ;;; Default logger levels
 
 (def (constant e) +dribble+ 0)
-
 (def (constant e) +debug+   1)
-
 (def (constant e) +info+    2)
-
 (def (constant e) +warn+    3)
-
 (def (constant e) +error+   4)
-
 (def (constant e) +fatal+   5)
 
-(def (constant e) +log-level-names+ '(+dribble+ +debug+ +info+ +warn+ +error+ +fatal+))
+(def (constant e :test 'equalp) +log-level-names+ #(+dribble+ +debug+ +info+ +warn+ +error+ +fatal+))
 
 ;;;;;;
 ;;; Variables
@@ -66,14 +61,9 @@
                                   name))
        result)))
 
-(def method print-object ((self logger) stream)
-  (print-unreadable-object (self stream :type t :identity t)
-    (let ((*standard-output* stream))
-      (block printing
-        (handler-bind ((error (lambda (error)
-                                (declare (ignore error))
-                                (write-string "<<error printing object>>") (return-from printing))))
-          (format stream "~S" (name-of self)))))))
+(def print-object logger
+  (with-keyword-package
+    (write (name-of self))))
 
 (def method shared-initialize :after ((self logger) slot-names &key parents)
   (declare (ignore slot-names))
@@ -140,7 +130,7 @@
     (setf (compile-time-level (find-logger self) :recursive recursive) new-level)))
 
 (def (macro e) with-logger-level (logger-name new-level &body body)
-  "Set the level of the listed logger(s) to NEW-LEVEL and restore the original value in an unwind-protect."
+  "Set the runtime level of the listed logger(s) to NEW-LEVEL and restore the original value in an unwind-protect."
   (cond ((consp logger-name)
          `(with-logger-level ,(pop logger-name) ,new-level
             ,(if logger-name
@@ -150,7 +140,7 @@
                     ,@body))))
         ((symbolp logger-name)
          (with-unique-names (logger old-level)
-           `(let* ((,logger (find-logger ',logger-name))
+           `(bind ((,logger (find-logger ',logger-name))
                    (,old-level (runtime-level-of ,logger)))
               (setf (runtime-level-of ,logger) ,new-level)
               (unwind-protect
@@ -208,8 +198,7 @@
            (type symbol name))
   (unless (eq (symbol-package name) *package*)
     (simple-style-warning "When defining a logger named ~A, the home package of the symbol is not *package* (not (eq ~A ~A))"
-                          (let ((*package* (find-package "KEYWORD")))
-                            (format nil "~S" name))
+                          (fully-qualified-symbol-name name)
                           (symbol-package name) *package*))
   (when appender
     (setf appenders (append appenders (list appender))))

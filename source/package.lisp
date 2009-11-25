@@ -9,5 +9,6 @@
 (def package :hu.dwim.logger
   (:use :hu.dwim.asdf
         :hu.dwim.common
-        :hu.dwim.def)
+        :hu.dwim.def
+        :hu.dwim.util)
   (:readtable-setup (enable-standard-hu.dwim-syntaxes)))
