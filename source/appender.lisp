@@ -15,7 +15,7 @@
   ((verbosity 2)))
 
 (def (class* e) stream-appender (appender)
-  ((stream))
+  ((stream *debug-io*))
   (:documentation "Human readable logger."))
 
 (def method make-instance ((class (eql (find-class 'stream-appender))) &rest initargs)
