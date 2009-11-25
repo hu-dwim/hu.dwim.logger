@@ -26,43 +26,26 @@
 ;;;;;;
 ;;; Variables
 
-(def special-variable *loggers* (make-hash-table :test 'eq))
+(def (namespace :finder-name %find-logger) logger)
 
 (def (special-variable e) *default-compile-time-level* (if *load-as-production?* +debug+ +dribble+))
 
 ;;;;;;
 ;;; Namespace
 
-(def function logger? (value)
-  (typep value 'logger))
+(def (function e) find-logger (name &key (otherwise nil otherwise?))
+  (if otherwise?
+      (%find-logger name :otherwise otherwise)
+      (%find-logger name)))
 
-(def function %find-logger (name &optional (errorp t))
-  (if (logger? name)
-      name
-      (let ((logger (gethash name *loggers*)))
-        (when (and errorp
-                   (null logger))
-          (error "Couldn't find a logger by the name ~S" name))
-        logger)))
-
-(def (function e) find-logger (name &optional (errorp t))
-  (%find-logger name errorp))
-
-(def compiler-macro find-logger (&whole whole name &optional (errorp t))
-  (if (and (consp name)
-           (eq 'quote (first name))
-           (symbolp (second name)))
-      `(load-time-value (%find-logger ,name ,errorp))
+(def compiler-macro find-logger (&whole whole name &key (otherwise nil otherwise?))
+  (if (quoted-symbol? name)
+      `(load-time-value (%find-logger ,name ,@(when otherwise? `(:otherwise ,otherwise))))
       whole))
 
-(def function (setf find-logger) (logger name)
-  (assert (typep logger 'logger))
-  (if logger
-      (progn
-        (when (gethash name *loggers*)
-          (simple-style-warning "Redefining logger ~S" name))
-        (setf (gethash name *loggers*) logger))
-      (remhash name *loggers*)))
+(def (function e) (setf find-logger) (logger name)
+  (check-type logger logger)
+  (setf (%find-logger name) logger))
 
 ;;;;;;
 ;;; Logger
@@ -113,27 +96,19 @@
                :minimize (log-level parent))
             (error "Can't determine level for ~S" self))))
 
-  (:method ((self null))
-    (error "NIL is not a valid log logger name"))
-
   (:method ((self symbol))
     (log-level (find-logger self))))
 
-(def generic (setf log-level) (new-level self &optional recursive)
-  (:method (new-level (self logger) &optional (recursive t))
-    "Change the log level of LOGGER to NEW-LEVEL. If RECUSIVE is T the setting is also applied to the sub loggers of LOGGER."
+(def generic (setf log-level) (new-level self &key recursive)
+  (:method (new-level (self logger) &key (recursive #t))
     (setf (slot-value self 'runtime-level) new-level)
     (when recursive
       (dolist (child (children-of self))
         (setf (log-level child) new-level)))
     new-level)
 
-  (:method (new-level (self symbol) &optional (recursive t))
-    (setf (log-level (find-logger self) recursive) new-level))
-
-  (:method (new-level (self null) &optional (recursive t))
-    (declare (ignore new-level self recursive))
-    (error "NIL does not specify a logger.")))
+  (:method (new-level (self symbol) &key (recursive #t))
+    (setf (log-level (find-logger self) :recursive recursive) new-level)))
 
 ;;;;;;
 ;;; Compile time level
@@ -153,21 +128,16 @@
   (:method ((self symbol))
     (compile-time-level (find-logger self))))
 
-(def generic (setf compile-time-level) (new-level logger &optional recursive)
-  (:method (new-level (self logger) &optional (recursive t))
-    "Change the compile time log level of LOGGER to NEW-LEVEL. If RECUSIVE is T the setting is also applied to the sub loggers of LOGGER."
+(def generic (setf compile-time-level) (new-level logger &key recursive)
+  (:method (new-level (self logger) &key (recursive #t))
     (setf (slot-value self 'compile-time-level) new-level)
     (when recursive
       (dolist (child (children-of self))
         (setf (compile-time-level child) new-level)))
     new-level)
 
-  (:method (new-level (self symbol) &optional (recursive t))
-    (setf (compile-time-level (find-logger self) recursive) new-level))
-
-  (:method (new-level (self null) &optional (recursive t))
-    (declare (ignore new-level self recursive))
-    (error "NIL does not specify a logger.")))
+  (:method (new-level (self symbol) &key (recursive #t))
+    (setf (compile-time-level (find-logger self) :recursive recursive) new-level)))
 
 (def (macro e) with-logger-level (logger-name new-level &body body)
   "Set the level of the listed logger(s) to NEW-LEVEL and restore the original value in an unwind-protect."
@@ -244,8 +214,8 @@
   (when appender
     (setf appenders (append appenders (list appender))))
   (let ((parents (or (mapcar (lambda (parent)
-                               `(or (find-logger ',parent nil)
-                                    (error "Attempt to define a sub logger of the undefined logger ~S." ',parent)))
+                               `(or (find-logger ',parent :otherwise #f)
+                                    (error "Attempt to define a sub-logger of the undefined logger ~S." ',parent)))
                              parents)
                      (unless (eq name 'standard-logger)
                        '((find-logger 'standard-logger))))))
@@ -268,7 +238,7 @@
       (with-unique-names (logger)
         `(progn
            (eval-when (:compile-toplevel :load-toplevel :execute)
-             (unless (find-logger ',name nil)
+             (unless (find-logger ',name :otherwise #f)
                (setf (find-logger ',name) (make-instance 'logger
                                                          :name ',name
                                                          ,@(when compile-time-level
