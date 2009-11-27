@@ -75,66 +75,67 @@
 ;;; Runtime level
 
 (def function at-runtime-enabled? (logger level)
-  (>= level (log-level logger)))
+  (>= level (log-level/runtime logger)))
 
-(def (generic e) log-level (logger)
-  (:method ((self logger))
-    (or (runtime-level-of self)
-        (if (parents-of self)
-            (loop
-               :for parent :in (parents-of self)
-               :minimize (log-level parent))
-            (error "Can't determine level for ~S" self))))
+(def (function e) log-level (logger)
+  (log-level/runtime logger))
 
-  (:method ((self symbol))
-    (log-level (find-logger self))))
+(def function (setf log-level) (new-value logger)
+  (setf (log-level/runtime logger) new-value))
 
-(def generic (setf log-level) (new-level self &key recursive)
-  (:method (new-level (self logger) &key (recursive #t))
-    (setf (slot-value self 'runtime-level) new-level)
-    (when recursive
-      (dolist (child (children-of self))
-        (setf (log-level child) new-level)))
-    new-level)
+(def (function e) log-level/runtime (logger)
+  (if (symbolp logger)
+      (log-level/runtime (find-logger logger))
+      (or (runtime-level-of logger)
+          (if (parents-of logger)
+              (loop
+                :for parent :in (parents-of logger)
+                :minimize (log-level/runtime parent))
+              (error "Can't determine runtime level for ~S" logger)))))
 
-  (:method (new-level (self symbol) &key (recursive #t))
-    (setf (log-level (find-logger self) :recursive recursive) new-level)))
+(def function (setf log-level/runtime) (new-level logger &key recursive)
+  (if (symbolp logger)
+      (setf (log-level/runtime (find-logger logger) :recursive recursive) new-level)
+      (progn
+        (setf (runtime-level-of logger) new-level)
+        (when recursive
+          (dolist (child (children-of logger))
+            (setf (log-level/runtime child) new-level)))
+        new-level)))
 
 ;;;;;;
 ;;; Compile time level
 
+;; the following is a bit of a copy-paste, but let's just skip macrology for only two instances...
 (def function at-compile-time-enabled? (logger level)
-  (>= level (compile-time-level logger)))
+  (>= level (log-level/compile-time logger)))
 
-(def (generic e) compile-time-level (logger)
-  (:method ((self logger))
-    (or (compile-time-level-of self)
-        (if (parents-of self)
-            (loop
-               :for parent :in (parents-of self)
-               :minimize (compile-time-level parent))
-            (error "Can't determine compile time level for ~S" self))))
+(def (function e) log-level/compile-time (logger)
+  (if (symbolp logger)
+      (log-level/compile-time (find-logger logger))
+      (or (compile-time-level-of logger)
+          (if (parents-of logger)
+              (loop
+                :for parent :in (parents-of logger)
+                :minimize (log-level/compile-time parent))
+              (error "Can't determine compile-time level for ~S" logger)))))
 
-  (:method ((self symbol))
-    (compile-time-level (find-logger self))))
+(def function (setf log-level/compile-time) (new-level logger &key recursive)
+  (if (symbolp logger)
+      (setf (log-level/compile-time (find-logger logger) :recursive recursive) new-level)
+      (progn
+        (setf (compile-time-level-of logger) new-level)
+        (when recursive
+          (dolist (child (children-of logger))
+            (setf (log-level/compile-time child) new-level)))
+        new-level)))
 
-(def generic (setf compile-time-level) (new-level logger &key recursive)
-  (:method (new-level (self logger) &key (recursive #t))
-    (setf (slot-value self 'compile-time-level) new-level)
-    (when recursive
-      (dolist (child (children-of self))
-        (setf (compile-time-level child) new-level)))
-    new-level)
-
-  (:method (new-level (self symbol) &key (recursive #t))
-    (setf (compile-time-level (find-logger self) :recursive recursive) new-level)))
-
-(def (macro e) with-logger-level (logger-name new-level &body body)
+(def (macro e) with-logger-level ((logger-name new-level) &body body)
   "Set the runtime level of the listed logger(s) to NEW-LEVEL and restore the original value in an unwind-protect."
   (cond ((consp logger-name)
-         `(with-logger-level ,(pop logger-name) ,new-level
+         `(with-logger-level (,(pop logger-name) ,new-level)
             ,(if logger-name
-                 `(with-logger-level ,logger-name ,new-level
+                 `(with-logger-level (,logger-name ,new-level)
                     ,@body)
                  `(progn
                     ,@body))))
@@ -158,8 +159,8 @@
          (*package* #.(find-package "COMMON-LISP")))
      ,@body))
 
-;; while inside HANDLE-LOG-MESSAGE it is bound to the toplevel logger
-(def special-variable *toplevel-logger*)
+(def (special-variable :documentation "While inside HANDLE-LOG-MESSAGE, this variable is bound to the toplevel logger")
+  *toplevel-logger*)
 
 (def function call-handle-log-message (logger message level)
   (assert (not (boundp '*toplevel-logger*)))
