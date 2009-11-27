@@ -63,7 +63,7 @@
 
 (def print-object logger
   (with-keyword-package
-    (write (name-of self))))
+    (write (name-of -self-))))
 
 (def method shared-initialize :after ((self logger) slot-names &key parents)
   (declare (ignore slot-names))
