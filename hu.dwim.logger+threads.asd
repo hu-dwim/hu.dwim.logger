@@ -10,12 +10,9 @@
 
 (defsystem :hu.dwim.logger+threads
   :class hu.dwim.system
-  :author ("Attila Lendvai <attila.lendvai@gmail.com>"
-           "Tamás Borbély <tomi.borbely@gmail.com>"
-           "Levente Mészáros <levente.meszaros@gmail.com>")
-  :licence "BSD / Public domain"
   :depends-on (:bordeaux-threads
                :hu.dwim.logger
+               :hu.dwim.util.threads
                :iolib.os
                :trivial-garbage)
   :components ((:module "source"

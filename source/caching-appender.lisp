@@ -61,13 +61,14 @@
 
 (def method format-caching-appender-message ((logger logger) (appender caching-appender) message level)
   (bind ((*package* #.(find-package :hu.dwim.logger)))
-    (format nil "(~S ~S @~A ~S ~S ~S)~%"
-            (machine-instance)
-            (bordeaux-threads:thread-name (bordeaux-threads:current-thread))
+    (format nil "(@~A ~3S ~8S ~S ~S ~S)~%"
             (local-time:now)
-            (name-of *toplevel-logger*)
+            (human-readable-thread-id)
             level
-            message)))
+            (name-of *toplevel-logger*)
+            message
+            ;; TODO this should eventually be replaced with some smartness coming from with-activity
+            (bordeaux-threads:thread-name (bordeaux-threads:current-thread)))))
 
 (def method append-message ((logger logger) (appender caching-appender) message level)
   (with-lock-held-on-caching-appender appender
