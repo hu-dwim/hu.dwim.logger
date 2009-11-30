@@ -35,20 +35,22 @@
   ()
   (:documentation "A subclass of STREAM-APPENDER which attempts to be as precise as possible, logger names and log level names are printed with a package prefix and the time is printed in long format."))
 
-(def method append-message :around ((logger logger) (s stream-appender) message level)
+(def method append-message :around ((logger logger) (appender stream-appender) message level)
   (restart-case
-      (call-next-method)
+      (multiple-value-prog1
+          (call-next-method)
+        (finish-output (stream-of appender)))
     (use-debug-io ()
       :report "Use the current value of *debug-io*"
-      (setf (stream-of s) *debug-io*)
-      (append-message logger s message level))
+      (setf (stream-of appender) *debug-io*)
+      (append-message logger appender message level))
     (use-standard-output ()
       :report "Use the current value of *standard-output*"
-      (setf (stream-of s) *standard-output*)
-      (append-message logger s message level))
+      (setf (stream-of appender) *standard-output*)
+      (append-message logger appender message level))
     (silence-logger ()
       :report "Ignore all future messages to this logger."
-      (setf (stream-of s) (make-broadcast-stream)))))
+      (setf (stream-of appender) (make-broadcast-stream)))))
 
 (def method append-message ((logger logger) (appender brief-stream-appender) message level)
   (local-time:with-decoded-timestamp (:minute minute :hour hour :day day :month month :year year)
