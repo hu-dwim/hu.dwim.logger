@@ -6,6 +6,8 @@
 
 (in-package :hu.dwim.logger)
 
+(def (special-variable e) *log-output* *debug-io*)
+
 ;;;;;;
 ;;; Stream appender
 
@@ -15,8 +17,14 @@
   ((verbosity 2)))
 
 (def (class* e) stream-appender (appender)
-  ((stream *debug-io*))
+  ((stream '*log-output*))
   (:documentation "Human readable logger."))
+
+(def method stream-of ((self appender))
+  (bind ((result (call-next-method)))
+    (if (symbolp result)
+        (symbol-value result)
+        result)))
 
 (def method make-instance ((class (eql (find-class 'stream-appender))) &rest initargs)
   (declare (ignore initargs))
@@ -85,7 +93,7 @@
           "~A ~S ~S: ~A~%"
           (local-time:now) (name-of *toplevel-logger*) level message))
 
-(def (function e) make-stream-appender (&rest args &key (stream *debug-io*) (verbosity 2) &allow-other-keys)
+(def (function e) make-stream-appender (&rest args &key (stream '*log-output*) (verbosity 2) &allow-other-keys)
   (check-type verbosity number)
   (remove-from-plistf args :stream :verbosity)
   (apply #'make-instance (case verbosity
