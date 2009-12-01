@@ -13,7 +13,7 @@
     (paragraph ()
       "A logging library that, among other things, supports chaining log messages through a hierarchy of loggers, separate compile-time and runtime log level, and provides various appenders, including one that supports multiple threads.")
     (paragraph ()
-      "It's based on the logger in " (link "http://common-lisp.net/project/bese/" "Arnesi") ", originally written by Marco Baringer."))
+      "It's based on the logger in " (hyperlink "http://common-lisp.net/project/bese/" "Arnesi") ", originally written by Marco Baringer."))
   (chapter (:title "Tutorial")
     ;; TODO add links to code fragments
     (paragraph ()
