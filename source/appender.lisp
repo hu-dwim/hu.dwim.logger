@@ -144,3 +144,99 @@
 
 (def (function e) make-level-filtering-appender (minimum-level &rest chained-appenders)
   (make-instance 'level-filtering-appender :minimum-level minimum-level :chained-appenders chained-appenders))
+
+;;;;;;
+;;; caching appender
+
+(def generic format-caching-appender-message (logger appender message level))
+(def generic flush-caching-appender-messages (appender lines))
+
+;; TODO delme, and use something in iolib.os once it's comitted...
+(def (function io) get-monotonic-time ()
+  "Returns a time in seconds as a double-float that constantly grows (unaffected by setting the system clock)."
+  (isys:%sys-get-monotonic-time))
+
+(def constant +caching-appender/maximum-cache-size+ 128)
+
+(def (namespace :weakness :key) caching-appender)
+
+(def (class* e) caching-appender ()
+  ((lock (bordeaux-threads:make-lock "a caching-appender of hu.dwim.logger"))
+   (last-flushed-at (get-monotonic-time))
+   (cache (make-array +caching-appender/maximum-cache-size+ :adjustable #t :fill-pointer 0))
+   (async-flushing #f :accessor async-flushing? :type boolean)))
+
+(def constructor caching-appender
+  (setf (find-caching-appender -self-) #t))
+
+(def with-macro with-lock-held-on-caching-appender (appender)
+  (bordeaux-threads:with-recursive-lock-held ((lock-of appender))
+    (-body-)))
+
+(def method flush-caching-appender-messages :after ((appender caching-appender) lines)
+  (setf (last-flushed-at-of appender) (get-monotonic-time)))
+
+(def (function e) flush-caching-appenders ()
+  (bind ((appenders '()))
+    (iterate-caching-appender-namespace
+     (lambda (appender value)
+       (declare (ignore value))
+       (push appender appenders)))
+    ;; flush without the namespace lock...
+    (map nil 'flush-caching-appender appenders)))
+
+(def (function e) flush-caching-appender (appender)
+  (bind ((lines nil)
+         (flushed? #f))
+    (flet ((ensure-flushed ()
+             (when (and lines
+                        (not flushed?))
+               (setf flushed? #t)
+               (flush-caching-appender-messages appender lines))))
+      (with-lock-held-on-caching-appender appender
+        (bind ((cache (cache-of appender))
+               (cache-size (length cache)))
+          (unless (zerop cache-size)
+            (setf lines (make-array cache-size :initial-contents cache))
+            (setf (fill-pointer cache) 0)))
+        (unless (async-flushing? appender)
+          (ensure-flushed)))
+      (ensure-flushed)))
+  (values))
+
+(def method format-caching-appender-message ((logger logger) (appender caching-appender) message level)
+  (bind ((*package* #.(find-package :hu.dwim.logger)))
+    (format nil "(@~A ~3S ~8S ~S ~S ~S)~%"
+            (local-time:now)
+            (human-readable-thread-id)
+            level
+            (name-of *toplevel-logger*)
+            message
+            ;; TODO this should eventually be replaced with some smartness coming from with-activity
+            (bordeaux-threads:thread-name (bordeaux-threads:current-thread)))))
+
+(def method append-message ((logger logger) (appender caching-appender) message level)
+  (with-lock-held-on-caching-appender appender
+    (bind ((cache (cache-of appender)))
+      (when (>= (length cache) (array-dimension cache 0))
+        (flush-caching-appender appender)
+        ;; we have the lock, it must be empty
+        (assert (zerop (length cache))))
+      (vector-push-extend (format-caching-appender-message logger appender message level) cache))))
+
+;;;;;;
+;;; thread safe file appender
+
+(def (class* e) thread-safe-file-appender (caching-appender file-appender)
+  ()
+  (:default-initargs :async-flushing #f))
+
+(def method flush-caching-appender-messages ((appender thread-safe-file-appender) lines)
+  (with-output-to-file-appender-file (output appender)
+    (loop
+      :for line :across lines
+      :do (write-string line output)))
+  (values))
+
+(def (function e) make-thread-safe-file-appender (file-name)
+  (make-instance 'thread-safe-file-appender :log-file file-name))
