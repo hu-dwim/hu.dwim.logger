@@ -10,11 +10,7 @@
 
 (defsystem :hu.dwim.logger
   :class hu.dwim.system
-  :author ("Attila Lendvai <attila.lendvai@gmail.com>"
-           "Levente Mészáros <levente.meszaros@gmail.com>"
-           "Tamás Borbély <tomi.borbely@gmail.com>")
-  :licence "BSD / Public domain"
-  :description "Logger"
+  :description "Generic purpose logger utility."
   :depends-on (:bordeaux-threads
                :hu.dwim.def.namespace
                :hu.dwim.def+hu.dwim.common
