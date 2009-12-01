@@ -20,7 +20,7 @@
   ((stream '*log-output*))
   (:documentation "Human readable logger."))
 
-(def method stream-of ((self appender))
+(def method stream-of :around ((self appender))
   (bind ((result (call-next-method)))
     (if (symbolp result)
         (symbol-value result)
