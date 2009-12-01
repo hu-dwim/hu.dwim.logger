@@ -170,7 +170,7 @@
                                     (handle-log-message logger message level)
                                     t)))
         (unless ok?
-          (warn "Ignoring error comding from inside HANDLE-LOG-MESSAGE: ~A" error)))))
+          (warn "Ignoring error coming from inside HANDLE-LOG-MESSAGE: ~A" error)))))
   (values))
 
 (def (generic e) handle-log-message (logger message level)
