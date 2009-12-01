@@ -10,11 +10,6 @@
 
 (defsystem :hu.dwim.logger.documentation
   :class hu.dwim.documentation-system
-  :author ("Attila Lendvai <attila.lendvai@gmail.com>"
-           "Levente Mészáros <levente.meszaros@gmail.com>"
-           "Tamás Borbély <tomi.borbely@gmail.com>")
-  :licence "BSD / Public domain"
-  :description "Documentation for hu.dwim.logger"
   :depends-on (:hu.dwim.logger.test
                :hu.dwim.wui)
   :components ((:module "documentation"
