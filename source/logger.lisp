@@ -257,5 +257,7 @@
        :appender ,appender
        :appenders ,appenders
        :documentation ,documentation)
-     ,@(when (getf -options- :export)
-             `((export ',(cons name (collect-helper-names name)))))))
+     ,@(ecase (getf -options- :export)
+         (:printers `((export ',(collect-helper-names name))))
+         ((nil) (values))
+         ((t) `((export ',(cons name (collect-helper-names name))))))))
