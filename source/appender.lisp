@@ -163,7 +163,7 @@
 (def (class* e) caching-appender ()
   ((lock (bordeaux-threads:make-lock "a caching-appender of hu.dwim.logger"))
    (last-flushed-at (get-monotonic-time))
-   (cache (make-array +caching-appender/maximum-cache-size+ :adjustable #t :fill-pointer 0))
+   (cache (make-array +caching-appender/maximum-cache-size+ :adjustable #f :fill-pointer 0))
    (async-flushing #f :accessor async-flushing? :type boolean)))
 
 (def constructor caching-appender
@@ -216,13 +216,14 @@
             (bordeaux-threads:thread-name (bordeaux-threads:current-thread)))))
 
 (def method append-message ((logger logger) (appender caching-appender) message level)
-  (with-lock-held-on-caching-appender appender
-    (bind ((cache (cache-of appender)))
-      (when (>= (length cache) (array-dimension cache 0))
-        (flush-caching-appender appender)
-        ;; we have the lock, it must be empty
-        (assert (zerop (length cache))))
-      (vector-push-extend (format-caching-appender-message logger appender message level) cache))))
+  (bind ((formatted-message (format-caching-appender-message logger appender message level)))
+    (with-lock-held-on-caching-appender appender
+      (bind ((cache (cache-of appender)))
+        (vector-push-extend formatted-message cache)
+        (when (>= (length cache) (array-dimension cache 0))
+          (flush-caching-appender appender)
+          ;; we have the lock, so it must be empty here
+          (assert (zerop (length cache))))))))
 
 ;;;;;;
 ;;; thread safe file appender
