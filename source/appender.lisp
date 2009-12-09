@@ -49,15 +49,15 @@
           (call-next-method)
         (finish-output (stream-of appender)))
     (use-debug-io ()
-      :report "Use the current value of *debug-io*"
+      :report "Set the output stream of this appender to the current value of *debug-io* and then try again appending this message"
       (setf (stream-of appender) *debug-io*)
       (append-message logger appender message level))
     (use-standard-output ()
-      :report "Use the current value of *standard-output*"
+      :report "Set the output stream of this appender to the current value of *standard-output* and then try again appending this message"
       (setf (stream-of appender) *standard-output*)
       (append-message logger appender message level))
     (silence-logger ()
-      :report "Ignore all future messages to this logger."
+      :report "Silence this logger (set its output stream to a silent deadend)"
       (setf (stream-of appender) (make-broadcast-stream)))))
 
 (def method append-message ((logger logger) (appender brief-stream-appender) message level)
