@@ -8,7 +8,7 @@
 
 (def project :hu.dwim.logger :path (system-pathname :hu.dwim.logger))
 
-(def book user-guide (:title "User guide")
+(def book user-guide (:title "User guide for hu.dwim.logger")
   (chapter (:title "Introduction")
     (paragraph ()
       "A logging library that, among other things, supports chaining log messages through a hierarchy of loggers, separate compile-time and runtime log level, and provides various appenders, including one that supports multiple threads.")
@@ -36,4 +36,4 @@ The logger called STANDARD-LOGGER is implicitly becomes a parent of all loggers,
 
 BRIEF-STREAM-APPENDER and VERBOSE-STREAM-APPENDER are simple stream appenders that write to their target stream, *LOG-OUTPUT* by default.
 
-THREAD-SAFE-FILE-APPENDER can be used from multiple threads because it caches messages protected by a lock and can flush messages from a timer (also protected by a lock, so the file contents will not be cluttered by overlapping writes from multiple threads). To use it, you need to load the :hu.dwim.logger+threads ASDF system.")))
+THREAD-SAFE-FILE-APPENDER can be used from multiple threads because it caches messages protected by a lock and can flush messages from a timer (also protected by a lock, so the file contents will not be cluttered by overlapping writes from multiple threads).")))

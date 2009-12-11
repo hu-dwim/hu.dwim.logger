@@ -26,6 +26,7 @@
 (defun hu.dwim.logger.lisp-mode-hook ()
   (font-lock-add-keywords
    'lisp-mode
+   ;; TODO this is broken for ( ( (log.debug))), all but the last closing paren gets the face
    `(("(\\(\\w+\\.\\(dribble\\|debug\\|info\\|warn\\|error\\|fatal\\) .*\\))" 1 'font-lock-logger-expression-face t))))
 
 (add-hook 'lisp-mode-hook 'hu.dwim.logger.lisp-mode-hook)
