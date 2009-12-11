@@ -13,9 +13,6 @@
 
 (def constant +max-logger-name-length+ 15)
 
-(def (class* e) appender ()
-  ((verbosity 2)))
-
 (def (class* e) stream-appender (appender)
   ((stream '*log-output*))
   (:documentation "Human readable logger."))
@@ -30,8 +27,8 @@
   (declare (ignore initargs))
   (error "STREAM-APPENDER is an abstract class. You must use either BRIEF-STREAM-APPENDER or VERBOSE-STREAM-APPENDER objects."))
 
-(def method append-message :around (logger (appender stream-appender) (message cons) level)
-  (append-message logger appender (apply #'format nil message) level))
+(def method append-message (logger (appender stream-appender) level message-control message-arguments)
+  (format-message logger appender level (stream-of appender) message-control message-arguments))
 
 (def (class* e) brief-stream-appender (stream-appender)
   ((last-message-year :initform 0)
@@ -43,7 +40,7 @@
   ()
   (:documentation "A subclass of STREAM-APPENDER which attempts to be as precise as possible, logger names and log level names are printed with a package prefix and the time is printed in long format."))
 
-(def method append-message :around ((logger logger) (appender stream-appender) message level)
+(def method append-message :around ((logger logger) (appender stream-appender) level message-control message-arguments)
   (restart-case
       (multiple-value-prog1
           (call-next-method)
@@ -51,47 +48,52 @@
     (use-debug-io ()
       :report "Set the output stream of this appender to the current value of *debug-io* and then try again appending this message"
       (setf (stream-of appender) *debug-io*)
-      (append-message logger appender message level))
+      (append-message logger appender level message-control message-arguments))
     (use-standard-output ()
       :report "Set the output stream of this appender to the current value of *standard-output* and then try again appending this message"
       (setf (stream-of appender) *standard-output*)
-      (append-message logger appender message level))
+      (append-message logger appender level message-control message-arguments))
     (silence-logger ()
       :report "Silence this logger (set its output stream to a silent deadend)"
       (setf (stream-of appender) (make-broadcast-stream)))))
 
-(def method append-message ((logger logger) (appender brief-stream-appender) message level)
+(def method format-message ((logger logger) (appender brief-stream-appender) level stream message-control message-arguments)
   (local-time:with-decoded-timestamp (:minute minute :hour hour :day day :month month :year year)
       (local-time:now)
     (with-slots (last-message-year last-message-month last-message-day) appender
       (unless (and (= year last-message-year)
                    (= month last-message-month)
                    (= day last-message-day))
-        (format (stream-of appender) "--TIME MARK ~4,'0D-~2,'0D-~2,'0D--~%"
+        (format stream "--TIME MARK ~4,'0D-~2,'0D-~2,'0D--~%"
                 year month day)
         (setf last-message-year year
               last-message-month month
               last-message-day day)))
     (bind ((logger-name (symbol-name (name-of *toplevel-logger*)))
-           (level-name (symbol-name level))
-           (logger-length (length logger-name)))
-      (format (stream-of appender)
+           (logger-name-length (length logger-name))
+           (level-name (symbol-name level)))
+      (format stream
               #.(concatenate 'string
                              "~2,'0D:~2,'0D ~"
                              (princ-to-string +max-logger-name-length+)
                              "@A ~7A ")
               hour minute
               (subseq logger-name
-                      (max 0 (- logger-length
+                      (max 0 (- logger-name-length
                                 +max-logger-name-length+))
-                      logger-length)
+                      logger-name-length)
               (subseq level-name 1 (1- (length level-name)))))
-    (format (stream-of appender) "~A~%" message)))
+    (apply #'format stream message-control message-arguments)
+    (terpri stream)))
 
-(def method append-message ((logger logger) (s verbose-stream-appender) message level)
-  (format (stream-of s)
-          "~A ~S ~S: ~A~%"
-          (local-time:now) (name-of *toplevel-logger*) level message))
+(def method format-message ((logger logger) (appender verbose-stream-appender) level stream message-control message-arguments)
+  (format stream
+          "~A ~S ~S: "
+          (local-time:now)
+          (fully-qualified-symbol-name (name-of *toplevel-logger*) :always-internal #t)
+          level)
+  (apply #'format stream message-control message-arguments)
+  (terpri stream))
 
 (def (function e) make-stream-appender (&rest args &key (stream '*log-output*) (verbosity 2) &allow-other-keys)
   (check-type verbosity number)
@@ -100,7 +102,6 @@
                            ((0 1) 'brief-stream-appender)
                            (t 'verbose-stream-appender))
          :stream stream
-         :verbosity verbosity
          args))
 
 ;;;;;;
@@ -113,15 +114,31 @@
   (:documentation "Logs to a file. The output of the file logger is not meant to be read directly by a human."))
 
 (def function file-appender-output-file (appender)
-  (merge-pathnames (log-file-of appender) *log-directory*))
+  (bind ((log-file (log-file-of appender)))
+    (if (eq (first (pathname-directory log-file)) :absolute)
+        log-file
+        (merge-pathnames log-file *log-directory*))))
 
 (def macro with-output-to-file-appender-file ((stream appender) &body body)
   `(with-open-file (,stream (file-appender-output-file ,appender) :direction :output :if-exists :append :if-does-not-exist :create)
      ,@body))
 
-(def method append-message ((logger logger) (appender file-appender) message level)
+(def method append-message ((logger logger) (appender file-appender) level message-control message-arguments)
   (with-output-to-file-appender-file (output appender)
-    (format output "(~S ~A ~S ~S)~%" level (local-time:now) (name-of *toplevel-logger*) message)))
+    (format-message logger appender level output message-control message-arguments)))
+
+(def method format-message ((logger logger) (appender file-appender) level stream message-control message-arguments)
+  (bind ((*package* #.(find-package :hu.dwim.logger)))
+    (write-string "(\"" stream)
+    (local-time:format-rfc3339-timestring stream (local-time:now))
+    (format stream "\" ~3S ~8S ~A \""
+            (human-readable-thread-id)
+            level
+            (fully-qualified-symbol-name (name-of *toplevel-logger*) :always-internal #t))
+    (apply #'format stream message-control message-arguments)
+    (format stream "\" ~S)~%"
+            ;; TODO this should eventually be replaced with some smartness coming from with-activity
+            (bordeaux-threads:thread-name (bordeaux-threads:current-thread)))))
 
 (def (function e) make-file-appender (file-name)
   (make-instance 'file-appender :log-file file-name))
@@ -134,13 +151,13 @@
    (chained-appenders))
   (:documentation "Drops messages below MINIMUM-LEVEL and forwards the others to CHAINED-APPENDERS."))
 
-(def method append-message ((logger logger) (appender level-filtering-appender) message level)
+(def method append-message ((logger logger) (appender level-filtering-appender) level message-control message-arguments)
   (when (>= (etypecase level
               (number level)
               (symbol (symbol-value level)))
             (minimum-level-of appender))
     (dolist (chained-appender (chained-appenders-of appender))
-      (append-message logger chained-appender message level))))
+      (append-message logger chained-appender level message-control message-arguments))))
 
 (def (function e) make-level-filtering-appender (minimum-level &rest chained-appenders)
   (make-instance 'level-filtering-appender :minimum-level minimum-level :chained-appenders chained-appenders))
@@ -148,7 +165,6 @@
 ;;;;;;
 ;;; caching appender
 
-(def generic format-caching-appender-message (logger appender message level))
 (def generic flush-caching-appender-messages (appender lines))
 
 ;; TODO delme, and use something in iolib.os once it's comitted...
@@ -204,19 +220,8 @@
       (ensure-flushed)))
   (values))
 
-(def method format-caching-appender-message ((logger logger) (appender caching-appender) message level)
-  (bind ((*package* #.(find-package :hu.dwim.logger)))
-    (format nil "(@~A ~3S ~8S ~S ~S ~S)~%"
-            (local-time:now)
-            (human-readable-thread-id)
-            level
-            (name-of *toplevel-logger*)
-            message
-            ;; TODO this should eventually be replaced with some smartness coming from with-activity
-            (bordeaux-threads:thread-name (bordeaux-threads:current-thread)))))
-
-(def method append-message ((logger logger) (appender caching-appender) message level)
-  (bind ((formatted-message (format-caching-appender-message logger appender message level)))
+(def method append-message ((logger logger) (appender caching-appender) level message-control message-arguments)
+  (bind ((formatted-message (format-message logger appender level nil message-control message-arguments)))
     (with-lock-held-on-caching-appender appender
       (bind ((cache (cache-of appender)))
         (vector-push-extend formatted-message cache)

@@ -21,7 +21,8 @@
                :local-time
                :trivial-garbage)
   :components ((:module "source"
-                :components ((:file "appender" :depends-on ("logger"))
-                             (:file "logger" :depends-on ("package"))
+                :components ((:file "api" :depends-on ("package"))
+                             (:file "appender" :depends-on ("logger" "api"))
+                             (:file "logger" :depends-on ("api"))
                              (:file "package")
-                             (:file "standard-logger" :depends-on ("logger"))))))
+                             (:file "standard-logger" :depends-on ("logger" "api"))))))

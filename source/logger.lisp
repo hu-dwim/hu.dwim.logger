@@ -162,27 +162,22 @@
 (def (special-variable :documentation "While inside HANDLE-LOG-MESSAGE, this variable is bound to the toplevel logger")
   *toplevel-logger*)
 
-(def function call-handle-log-message (logger message level)
+(def function call-handle-log-message (logger level message-control message-arguments)
   (assert (not (boundp '*toplevel-logger*)))
   (with-logging-io
-    (bind ((*toplevel-logger* logger))
-      (bind (((:values ok? error) (ignore-errors
-                                    (handle-log-message logger message level)
-                                    t)))
-        (unless ok?
-          (warn "Ignoring error coming from inside HANDLE-LOG-MESSAGE: ~A" error)))))
+    (bind ((*toplevel-logger* logger)
+           ((:values ok? error) (ignore-errors
+                                  (handle-log-message logger level message-control message-arguments)
+                                  #t)))
+      (unless ok?
+        (warn "Ignored the following error coming from ~S: ~A" 'handle-log-message error))))
   (values))
 
-(def (generic e) handle-log-message (logger message level)
-  (:documentation "Message is either a string or a list. When it's a list and the first element is a string then it's processed as args to cl:format.")
-  (:method ((self logger) message level)
-    (if (appenders-of self)
-        (dolist (appender (appenders-of self))
-          (append-message self appender message level))
-        (dolist (parent (parents-of self))
-          (handle-log-message parent message level)))))
-
-(def (generic e) append-message (logger appender message level))
+(def method handle-log-message ((logger logger) level message-control message-arguments)
+  (dolist (appender (appenders-of logger))
+    (append-message logger appender level message-control message-arguments))
+  (dolist (parent (parents-of logger))
+    (handle-log-message parent level message-control message-arguments)))
 
 (def function collect-helper-names (loggern-name)
   (flet ((make (suffix)
@@ -221,8 +216,8 @@
                           `(bind ((,logger (load-time-value (find-logger ',',name))))
                              (when (at-runtime-enabled? ,logger ,',level)
                                ,(if message-args
-                                    `(call-handle-log-message ,logger (list ,message-control ,@message-args) ',',level)
-                                    `(call-handle-log-message ,logger ,message-control ',',level)))
+                                    `(call-handle-log-message ,logger ',',level ,message-control (list ,@message-args))
+                                    `(call-handle-log-message ,logger ',',level ,message-control nil)))
                              (values)))
                         `(values)))))))
       (with-unique-names (logger)
