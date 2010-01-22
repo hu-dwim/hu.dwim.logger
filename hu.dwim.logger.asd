@@ -17,7 +17,7 @@
                :hu.dwim.defclass-star+hu.dwim.def
                :hu.dwim.util
                :hu.dwim.util.threads
-               :iolib.os
+               #-allegro :iolib.os
                :local-time
                :trivial-garbage)
   :components ((:module "source"

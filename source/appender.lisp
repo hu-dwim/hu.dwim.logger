@@ -170,7 +170,8 @@
 ;; TODO delme, and use something in iolib.os once it's comitted...
 (def (function io) get-monotonic-time ()
   "Returns a time in seconds as a double-float that constantly grows (unaffected by setting the system clock)."
-  (isys:%sys-get-monotonic-time))
+  #-allegro (isys:%sys-get-monotonic-time)
+  #+allegro (get-internal-real-time))
 
 (def constant +caching-appender/maximum-cache-size+ 128)
 
