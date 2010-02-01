@@ -160,7 +160,7 @@
         (*package* (load-time-value (find-package "COMMON-LISP"))))
     (-with-macro/body-)))
 
-(def (special-variable :documentation "While inside HANDLE-LOG-MESSAGE, this variable is bound to the toplevel logger")
+(def (special-variable :documentation "While inside HANDLE-LOG-MESSAGE, this variable is bound to the logger on which HANDLE-LOG-MESSAGE was called first, ignoring logger inheritance and handler delegation.")
   *toplevel-logger*)
 
 (def function call-handle-log-message (logger level message-control message-arguments)
