@@ -52,15 +52,18 @@
           (call-next-method)
         (finish-output (stream-of appender)))
     (use-debug-io ()
-      :report "Set the output stream of this appender to the current value of *debug-io* and then try again appending this message"
-      (setf (stream-of appender) *debug-io*)
+      :report (lambda (stream)
+                (format stream "Set the output stream of ~A (invoked through ~A) to '*debug-io* and then try again appending this message" appender *toplevel-logger*))
+      (setf (stream-of appender) '*debug-io*)
       (append-message logger appender level message-control message-arguments))
     (use-standard-output ()
-      :report "Set the output stream of this appender to the current value of *standard-output* and then try again appending this message"
-      (setf (stream-of appender) *standard-output*)
+      :report (lambda (stream)
+                (format stream "Set the output stream of ~A (invoked through ~A) to '*standard-output* and then try again appending this message" appender *toplevel-logger*))
+      (setf (stream-of appender) '*standard-output*)
       (append-message logger appender level message-control message-arguments))
     (silence-logger ()
-      :report "Silence this logger (set its output stream to a silent deadend)"
+      :report (lambda (stream)
+                (format stream "Set the output stream of ~A (invoked through ~A) to a deadend" appender *toplevel-logger*))
       (setf (stream-of appender) (make-broadcast-stream)))))
 
 (def method format-message ((logger logger) (appender brief-stream-appender) level stream message-control message-arguments)
