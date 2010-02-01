@@ -26,6 +26,9 @@
         (symbol-value result)
         result)))
 
+(def print-object stream-appender
+  (prin1 (slot-value -self- 'stream)))
+
 (def method make-instance ((class (eql (find-class 'stream-appender))) &rest initargs)
   (declare (ignore initargs))
   (error "STREAM-APPENDER is an abstract class. You must use either BRIEF-STREAM-APPENDER or VERBOSE-STREAM-APPENDER objects."))
@@ -115,6 +118,9 @@
 (def (class* e) file-appender (stream-appender)
   ((log-file :documentation "Name of the file to write log messages to."))
   (:documentation "Logs to a file. The output of the file logger is not meant to be read directly by a human."))
+
+(def print-object file-appender
+  (prin1 (file-appender-output-file -self-)))
 
 (def function file-appender-output-file (appender)
   (bind ((log-file (log-file-of appender)))
