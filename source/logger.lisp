@@ -152,12 +152,13 @@
 ;;;;;;
 ;;; Handling messages
 
-(def macro with-logging-io (&body body)
-  `(let ((*print-right-margin* most-positive-fixnum)
-         (*print-readably* nil)
-         (*print-length* 64)
-         (*package* #.(find-package "COMMON-LISP")))
-     ,@body))
+(def with-macro with-logging-io ()
+  (let ((*print-right-margin* most-positive-fixnum)
+        (*print-readably* nil)
+        (*print-length* 32)
+        (*print-level* 2)
+        (*package* (load-time-value (find-package "COMMON-LISP"))))
+    (-with-macro/body-)))
 
 (def (special-variable :documentation "While inside HANDLE-LOG-MESSAGE, this variable is bound to the toplevel logger")
   *toplevel-logger*)
