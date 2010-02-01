@@ -8,6 +8,9 @@
 
 (def (special-variable e) *log-output* *debug-io*)
 
+(def function logger-name-for-output (logger)
+  (fully-qualified-symbol-name (name-of logger) :separator "::"))
+
 ;;;;;;
 ;;; Stream appender
 
@@ -90,7 +93,7 @@
   (format stream
           "~A ~S ~S: "
           (local-time:now)
-          (fully-qualified-symbol-name (name-of *toplevel-logger*) :always-internal #t)
+          (logger-name-for-output *toplevel-logger*)
           level)
   (apply #'format stream message-control message-arguments)
   (terpri stream))
@@ -134,7 +137,7 @@
     (format stream "\" ~3S ~8S ~A \""
             (human-readable-thread-id)
             level
-            (fully-qualified-symbol-name (name-of *toplevel-logger*) :always-internal #t))
+            (logger-name-for-output *toplevel-logger*))
     (apply #'format stream message-control message-arguments)
     (format stream "\" ~S)~%"
             ;; TODO this should eventually be replaced with some smartness coming from with-activity
