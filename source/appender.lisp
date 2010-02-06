@@ -11,6 +11,11 @@
 (def function logger-name-for-output (logger)
   (fully-qualified-symbol-name (name-of logger) :separator "::"))
 
+(def function format-or-write-string (stream message-control message-arguments)
+  (if message-arguments
+      (apply #'format stream message-control message-arguments)
+      (write-string message-control stream)))
+
 ;;;;;;
 ;;; Stream appender
 
@@ -92,7 +97,7 @@
                                 +max-logger-name-length+))
                       logger-name-length)
               (subseq level-name 1 (1- (length level-name)))))
-    (apply #'format stream message-control message-arguments)
+    (format-or-write-string stream message-control message-arguments)
     (terpri stream)))
 
 (def method format-message ((logger logger) (appender verbose-stream-appender) level stream message-control message-arguments)
@@ -101,7 +106,7 @@
           (local-time:now)
           (logger-name-for-output *toplevel-logger*)
           level)
-  (apply #'format stream message-control message-arguments)
+  (format-or-write-string stream message-control message-arguments)
   (terpri stream))
 
 (def (function e) make-stream-appender (&rest args &key (stream '*log-output*) (verbosity 2) &allow-other-keys)
@@ -147,7 +152,7 @@
             (human-readable-thread-id)
             level
             (logger-name-for-output *toplevel-logger*))
-    (apply #'format stream message-control message-arguments)
+    (format-or-write-string stream message-control message-arguments)
     (format stream "\" ~S)~%"
             ;; TODO this should eventually be replaced with some smartness coming from with-activity
             (bordeaux-threads:thread-name (bordeaux-threads:current-thread)))))
