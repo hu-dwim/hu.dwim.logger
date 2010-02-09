@@ -221,7 +221,11 @@
        (declare (ignore value))
        (push appender appenders)))
     ;; flush without the namespace lock...
-    (map nil 'flush-caching-appender appenders)))
+    ;; TODO use surround-body-when
+    (if *ignore-logging-errors*
+        (ignore-errors
+          (map nil 'flush-caching-appender appenders))
+        (map nil 'flush-caching-appender appenders))))
 
 (def (function e) flush-caching-appender (appender)
   (bind ((lines nil)

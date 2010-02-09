@@ -169,6 +169,7 @@
   (assert (not (boundp '*toplevel-logger*)))
   (with-logging-io
     (bind ((*toplevel-logger* logger)
+           ;; TODO use surround-body-when
            ((:values ok? error) (if *ignore-logging-errors*
                                     (ignore-errors
                                       (handle-log-message logger level message-control message-arguments)
