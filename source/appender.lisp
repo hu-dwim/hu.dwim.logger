@@ -136,9 +136,12 @@
         log-file
         (merge-pathnames log-file *log-directory*))))
 
-(def macro with-output-to-file-appender-file ((stream appender) &body body)
-  `(with-open-file (,stream (file-appender-output-file ,appender) :direction :output :if-exists :append :if-does-not-exist :create)
-     ,@body))
+(def with-macro* with-output-to-file-appender-file (stream-var-name appender)
+  (loop
+    (with-simple-restart (retry-writing-log-file "Try to run the entire WITH-OPEN-FILE block again (and potentially emit screwed up or duplicate log entries!)")
+      (with-open-file (stream (file-appender-output-file appender) :direction :output :if-exists :append :if-does-not-exist :create)
+        (-with-macro/body- (stream stream-var-name)))
+      (return))))
 
 (def method append-message ((logger logger) (appender file-appender) level message-control message-arguments)
   (with-output-to-file-appender-file (output appender)
