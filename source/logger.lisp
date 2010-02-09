@@ -21,6 +21,8 @@
 ;;;;;;
 ;;; Variables
 
+(def (special-variable e) *ignore-logging-errors* #t)
+
 (def (namespace :finder-name %find-logger) logger)
 
 (def (special-variable e) *default-compile-time-level* (if *load-as-production?* +debug+ +dribble+))
@@ -167,9 +169,13 @@
   (assert (not (boundp '*toplevel-logger*)))
   (with-logging-io
     (bind ((*toplevel-logger* logger)
-           ((:values ok? error) (ignore-errors
-                                  (handle-log-message logger level message-control message-arguments)
-                                  #t)))
+           ((:values ok? error) (if *ignore-logging-errors*
+                                    (ignore-errors
+                                      (handle-log-message logger level message-control message-arguments)
+                                      #t)
+                                    (progn
+                                      (handle-log-message logger level message-control message-arguments)
+                                      #t))))
       (unless ok?
         (warn "Ignored the following error coming from ~S: ~A" 'handle-log-message error))))
   (values))
