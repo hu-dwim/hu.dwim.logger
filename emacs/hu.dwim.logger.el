@@ -7,8 +7,8 @@
 (provide 'hu.dwim.logger)
 
 ;; usage example in your init.el:
-;;
-;; (add-to-list 'load-path (expand-file-name "~/workspace/hu.dwim.logger/emacs/"))
+;; (setq dwim-workspace (getenv "DWIM_WORKSPACE"))
+;; (add-to-list 'load-path (expand-file-name (concat dwim-workspace "/hu.dwim.logger/emacs/")))
 ;;
 ;; (require 'hu.dwim.logger)
 
