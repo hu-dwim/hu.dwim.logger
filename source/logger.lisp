@@ -35,6 +35,7 @@
       (%find-logger name :otherwise otherwise)
       (%find-logger name)))
 
+#-allegro ;; TODO THL why? logger not found when loading from fasl
 (def compiler-macro find-logger (&whole whole name &key (otherwise nil otherwise?))
   (if (quoted-symbol? name)
       `(load-time-value (%find-logger ,name ,@(when otherwise? `(:otherwise ,otherwise))))
