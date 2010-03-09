@@ -6,8 +6,6 @@
 
 (in-package :hu.dwim.logger)
 
-(def (special-variable e) *log-output* *debug-io*)
-
 (def function logger-name-for-output (logger)
   (fully-qualified-symbol-name (name-of logger) :separator "::"))
 
@@ -22,7 +20,7 @@
 (def constant +max-logger-name-length+ 15)
 
 (def (class* e) stream-appender (appender)
-  ((stream '*log-output*))
+  ((stream '*standard-output*))
   (:documentation "Human readable logger."))
 
 (def method stream-of :around ((self appender))
@@ -109,7 +107,7 @@
   (format-or-write-string stream message-control message-arguments)
   (terpri stream))
 
-(def (function e) make-stream-appender (&rest args &key (stream '*log-output*) (verbosity 2) &allow-other-keys)
+(def (function e) make-stream-appender (&rest args &key (stream '*standard-output*) (verbosity 2) &allow-other-keys)
   (check-type verbosity number)
   (remove-from-plistf args :stream :verbosity)
   (apply #'make-instance (case verbosity
