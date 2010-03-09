@@ -136,7 +136,8 @@
         log-file
         (merge-pathnames log-file *log-directory*))))
 
-(def with-macro* with-output-to-file-appender-file (stream-var-name appender)
+(def (with-macro* :macro-only-arguments (stream-var-name))
+    with-output-to-file-appender-file (stream-var-name appender)
   (loop
     (with-simple-restart (retry-writing-log-file "Try to run the entire WITH-OPEN-FILE block again (and potentially emit screwed up or duplicate log entries!)")
       (with-open-file (stream (file-appender-output-file appender) :direction :output :if-exists :append :if-does-not-exist :create)
