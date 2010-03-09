@@ -171,13 +171,11 @@
   (with-logging-io
     (bind ((*toplevel-logger* logger)
            ;; TODO use surround-body-when
-           ((:values ok? error) (if *ignore-logging-errors*
+           ((:values ok? error) (surround-body-when *ignore-logging-errors*
                                     (ignore-errors
-                                      (handle-log-message logger level message-control message-arguments)
-                                      #t)
-                                    (progn
-                                      (handle-log-message logger level message-control message-arguments)
-                                      #t))))
+                                      (-body-))
+                                  (handle-log-message logger level message-control message-arguments)
+                                  #t)))
       (unless ok?
         (warn "Ignored the following error coming from ~S: ~A" 'handle-log-message error))))
   (values))
