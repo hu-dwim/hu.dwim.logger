@@ -195,7 +195,7 @@
 
 (def constant +caching-appender/maximum-cache-size+ 128)
 
-(def (namespace :weakness :key) caching-appender)
+(def (namespace :weakness :key-or-value) caching-appender)
 
 (def (class* e) caching-appender ()
   ((lock (bordeaux-threads:make-lock "a caching-appender of hu.dwim.logger"))
@@ -204,7 +204,7 @@
    (async-flushing #f :accessor async-flushing? :type boolean)))
 
 (def constructor caching-appender
-  (setf (find-caching-appender -self-) #t))
+  (setf (find-caching-appender -self-) -self-))
 
 (def with-macro with-lock-held-on-caching-appender (appender)
   (bordeaux-threads:with-recursive-lock-held ((lock-of appender))
@@ -214,12 +214,8 @@
   (setf (last-flushed-at-of appender) (get-monotonic-time)))
 
 (def (function e) flush-caching-appenders ()
-  (bind ((appenders '()))
-    (iterate-caching-appender-namespace
-     (lambda (appender value)
-       (declare (ignore value))
-       (push appender appenders)))
-    ;; flush without the namespace lock...
+  (bind ((appenders (collect-namespace-values 'caching-appender)))
+    ;; and now flush without the holding the namespace lock...
     (surround-body-when *ignore-logging-errors*
         (ignore-errors
           (-body-))
