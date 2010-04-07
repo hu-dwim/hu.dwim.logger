@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.util)
+(in-package :hu.dwim.def)
 
 (def package :hu.dwim.logger.documentation
   (:use :hu.dwim.asdf
@@ -15,4 +15,4 @@
         :hu.dwim.syntax-sugar
         :hu.dwim.util
         :hu.dwim.wui)
-  (:readtable-setup (enable-standard-hu.dwim-syntaxes)))
+  (:readtable-setup (hu.dwim.util:enable-standard-hu.dwim-syntaxes)))
