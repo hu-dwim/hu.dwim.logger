@@ -215,11 +215,14 @@
 
 (def (function e) flush-caching-appenders ()
   (bind ((appenders (collect-namespace-values 'caching-appender)))
-    ;; and now flush without the holding the namespace lock...
-    (surround-body-when *ignore-logging-errors*
-        (ignore-errors
-          (-body-))
-      (map nil 'flush-caching-appender appenders))))
+    ;; and now flush without holding the namespace lock...
+    (dolist (appender appenders)
+      (block flushing
+        (handler-bind
+            ((serious-condition (lambda (error)
+                                  (note-logging-error error appender)
+                                  (return-from flushing))))
+          (flush-caching-appender appender))))))
 
 (def (function e) flush-caching-appender (appender)
   (bind ((lines nil)

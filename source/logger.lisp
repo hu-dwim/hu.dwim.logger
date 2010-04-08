@@ -18,17 +18,12 @@
 
 (def (constant e :test 'equalp) +log-level-names+ #(+dribble+ +debug+ +info+ +warn+ +error+ +fatal+))
 
-;;;;;;
-;;; Variables
-
-(def (special-variable e) *ignore-logging-errors* #t)
-
-(def (namespace :finder-name %find-logger) logger)
-
 (def (special-variable e) *default-compile-time-level* (if *load-as-production?* +debug+ +dribble+))
 
 ;;;;;;
 ;;; Namespace
+
+(def (namespace :finder-name %find-logger) logger)
 
 (def (function e) find-logger (name &key (otherwise nil otherwise?))
   (if otherwise?
@@ -166,18 +161,31 @@
 (def (special-variable :documentation "While inside HANDLE-LOG-MESSAGE, this variable is bound to the logger on which HANDLE-LOG-MESSAGE was called first, ignoring logger inheritance and handler delegation.")
   *toplevel-logger*)
 
+(def function note-logging-error (error &optional context)
+  (maybe-invoke-debugger error :context context)
+  ;; NOTE don't use ~A, we don't want errors from print-object to interfere when printing the warning...
+  (warn "Ignoring the following error coming from ~S: ~S. For more information see ~S and/or ~S."
+        'handle-log-message error '*debug-on-error* 'debug-on-error?))
+
 (def function call-handle-log-message (logger level message-control message-arguments)
-  (assert (not (boundp '*toplevel-logger*)))
-  (with-logging-io
-    (bind ((*toplevel-logger* logger)
-           ;; TODO use surround-body-when
-           ((:values ok? error) (surround-body-when *ignore-logging-errors*
-                                    (ignore-errors
-                                      (-body-))
-                                  (handle-log-message logger level message-control message-arguments)
-                                  #t)))
-      (unless ok?
-        (warn "Ignored the following error coming from ~S: ~A" 'handle-log-message error))))
+  (when (boundp '*toplevel-logger*)
+    (maybe-invoke-debugger
+     (make-condition 'simple-error
+                     :format-control "Calling the entry point macros of hu.dwim.logger is not allowed while already inside the logging infrastructure. The recursive call of CALL-HANDLE-LOG-MESSAGE was invoked with the arguments ~A. The toplevel call was invoked on logger ~A."
+                     :format-arguments (list (list logger level message-control message-arguments)
+                                             *toplevel-logger*))
+     :context *toplevel-logger*)
+    (throw 'unwind-call-handle-log-message (values)))
+  (catch 'unwind-call-handle-log-message
+    (bind ((*toplevel-logger* logger))
+      ;; The logging facility should not alter the behavior of the application, therefore by default all errors coming from the logging
+      ;; infrastructure are masked here.
+      (handler-bind
+          ((serious-condition (lambda (error)
+                                (note-logging-error error logger)
+                                (throw 'unwind-call-handle-log-message (values)))))
+        (with-logging-io
+          (handle-log-message logger level message-control message-arguments)))))
   (values))
 
 (def method handle-log-message ((logger logger) level message-control message-arguments)
