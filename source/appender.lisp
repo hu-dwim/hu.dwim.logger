@@ -86,10 +86,11 @@
            (level-name (symbol-name level)))
       (format stream
               #.(concatenate 'string
-                             "~2,'0D:~2,'0D ~"
+                             "~2,'0D:~2,'0D ~A ~"
                              (princ-to-string +max-logger-name-length+)
                              "@A ~7A ")
               hour minute
+              (human-readable-thread-id)
               (subseq logger-name
                       (max 0 (- logger-name-length
                                 +max-logger-name-length+))
