@@ -9,10 +9,12 @@
 (def function logger-name-for-output (logger)
   (fully-qualified-symbol-name (name-of logger) :separator "::"))
 
-(def function format-or-write-string (stream message-control message-arguments)
+(def (function o) format-or-write-string (stream message-control &optional message-arguments)
+  (write-char #\❲ stream)
   (if message-arguments
       (apply #'format stream message-control message-arguments)
-      (write-string message-control stream)))
+      (write-string message-control stream))
+  (write-char #\❳ stream))
 
 ;;;;;;
 ;;; Stream appender
@@ -149,14 +151,13 @@
 
 (def method format-message ((logger logger) (appender file-appender) level stream message-control message-arguments)
   (bind ((*package* #.(find-package :hu.dwim.logger)))
-    (write-string "(\"" stream)
     (local-time:format-rfc3339-timestring stream (local-time:now))
-    (format stream "\" ~3S ~8S ~A \""
+    (format stream " ~3S ~9S ~A "
             (human-readable-thread-id)
             level
             (logger-name-for-output *toplevel-logger*))
     (format-or-write-string stream message-control message-arguments)
-    (format stream "\" ~S)~%"
+    (format stream " ~S~%"
             ;; TODO this should eventually be replaced with some smartness coming from with-activity
             (bordeaux-threads:thread-name (bordeaux-threads:current-thread)))))
 
