@@ -10,11 +10,9 @@
   (fully-qualified-symbol-name (name-of logger) :separator "::"))
 
 (def (function o) format-or-write-string (stream message-control &optional message-arguments)
-  (write-char #\❲ stream)
   (if message-arguments
       (apply #'format stream message-control message-arguments)
-      (write-string message-control stream))
-  (write-char #\❳ stream))
+      (write-string message-control stream)))
 
 ;;;;;;
 ;;; Stream appender
@@ -156,7 +154,9 @@
             (human-readable-thread-id)
             level
             (logger-name-for-output *toplevel-logger*))
+    (write-char #\❲ stream)
     (format-or-write-string stream message-control message-arguments)
+    (write-char #\❳ stream)
     (format stream " ~S~%"
             ;; TODO this should eventually be replaced with some smartness coming from with-activity
             (bordeaux-threads:thread-name (bordeaux-threads:current-thread)))))
