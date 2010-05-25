@@ -192,7 +192,7 @@
 ;; TODO or at least move it to hu.dwim.util if that's not the way to go...
 (def (function io) get-monotonic-time ()
   "Returns a time in seconds as a double-float that constantly grows (unaffected by setting the system clock)."
-  #-allegro (isys:%sys-get-monotonic-time)
+  #-allegro (isys:get-monotonic-time)
   #+allegro (get-internal-real-time))
 
 (def constant +caching-appender/maximum-cache-size+ 128)
