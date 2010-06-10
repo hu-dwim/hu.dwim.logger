@@ -168,6 +168,8 @@
         'handle-log-message error '*debug-on-error* 'debug-on-error?))
 
 (def function call-handle-log-message (logger level message-control message-arguments)
+  ;; TODO add details on why it's a problem or just delete this assert. comes up from audit log opening transactions...
+  #+nil
   (when (boundp '*toplevel-logger*)
     (maybe-invoke-debugger
      (make-condition 'simple-error
