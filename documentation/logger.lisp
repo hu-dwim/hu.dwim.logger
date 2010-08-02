@@ -6,7 +6,7 @@
 
 (in-package :hu.dwim.logger.documentation)
 
-(def project :hu.dwim.logger :path (system-pathname :hu.dwim.logger))
+(def project :hu.dwim.logger)
 
 (def book user-guide (:title "User guide for hu.dwim.logger")
   (chapter (:title "Introduction")
