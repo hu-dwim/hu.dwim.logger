@@ -15,8 +15,15 @@
   :appenders ((debug-only* (make-instance 'brief-stream-appender))))
 
 (def (function e) setup-logging-for-production (log-directory)
-  (unless (ignore-errors (truename log-directory))
-    (cerror "Ignore it" "Log directory does not exist or is not accessible. Tried: ~S" log-directory))
+  (loop
+    (restart-case
+        (progn
+          (unless (ignore-errors (truename log-directory))
+            (cerror "Ignore it" "Log directory does not exist or is not accessible. Tried: ~S" log-directory))
+          (return))
+      (retry ()
+        :report "Try again accessing the configured log directory"
+        (values))))
   (setf *log-directory* log-directory)
   (bind ((standard-logger (find-logger 'standard-logger)))
     (setf (hu.dwim.logger::appenders-of standard-logger)
