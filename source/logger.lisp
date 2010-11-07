@@ -20,12 +20,18 @@
 
 (def (special-variable e) *default-compile-time-level* (if *load-as-production?* +debug+ +dribble+))
 
+(def type logger-name ()
+  `(and symbol
+        (not (eql t))
+        (not null)))
+
 ;;;;;;
 ;;; Namespace
 
 (def (namespace :finder-name %find-logger) logger)
 
 (def (function e) find-logger (name &key (otherwise nil otherwise?))
+  (check-type name logger-name)
   (if otherwise?
       (%find-logger name :otherwise otherwise)
       (%find-logger name)))
@@ -38,6 +44,7 @@
 
 (def (function e) (setf find-logger) (logger name)
   (check-type logger logger)
+  (check-type name logger-name)
   (setf (%find-logger name) logger))
 
 ;;;;;;
