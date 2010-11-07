@@ -25,4 +25,4 @@
                              (:file "appender" :depends-on ("logger" "api"))
                              (:file "logger" :depends-on ("api"))
                              (:file "package")
-                             (:file "standard-logger" :depends-on ("logger" "api" "appender"))))))
+                             (:file "root-logger" :depends-on ("logger" "api" "appender"))))))

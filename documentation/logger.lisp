@@ -32,7 +32,7 @@ It will define 6 macros, each called MY-LOGGER.{level} for each of the 6 log lev
 
 The log messages are handled by the so called appenders. Each logger can have a list of appenders. Through the parent chain of the logger, each appender of each parent also receives the log message.
 
-The logger called STANDARD-LOGGER is implicitly becomes a parent of all loggers, so having a single appender on it catches all log messages. If the codebase is loaded with debug settings (see the global varaible called *LOAD-AS-PRODUCTION?*) then it will have a BRIEF-STREAM-APPENDER directed to *STANDARD-OUTPUT*.
+The logger called ROOT-LOGGER is implicitly becomes a parent of all loggers, so having a single appender on it catches all log messages. If the codebase is loaded with debug settings (see the global varaible called *LOAD-AS-PRODUCTION?*) then it will have a BRIEF-STREAM-APPENDER directed to *STANDARD-OUTPUT*.
 
 BRIEF-STREAM-APPENDER and VERBOSE-STREAM-APPENDER are simple stream appenders that write to their target stream, *STANDARD-OUTPUT* by default.
 

@@ -224,8 +224,8 @@
                                `(or (find-logger ',parent :otherwise #f)
                                     (error "Attempt to define a sub-logger of the undefined logger ~S." ',parent)))
                              parents)
-                     (unless (eq name 'standard-logger) ; special case the chicken-egg issue at the definition of the root logger
-                       '((find-logger 'standard-logger))))))
+                     (unless (eq name 'root-logger) ; special case the chicken-egg issue at the definition of the root logger
+                       '((find-logger 'root-logger))))))
     (flet ((make-log-helper (suffix level)
              (let ((logger-macro-name (format-symbol (symbol-package name) "~A.~A" (symbol-name name) (symbol-name suffix))))
                `(progn

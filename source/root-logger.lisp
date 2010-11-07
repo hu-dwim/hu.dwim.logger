@@ -6,10 +6,7 @@
 
 (in-package :hu.dwim.logger)
 
-;;;;;;
-;;; Standard logger
-
-(def (logger e) standard-logger ()
+(def (logger e) root-logger ()
   :runtime-level (if *load-as-production?* +info+ +debug+)
   :compile-time-level (if *load-as-production?* +debug+ +dribble+)
   :appenders ((debug-only* (make-instance 'brief-stream-appender)))
@@ -26,8 +23,8 @@
         :report "Try again accessing the configured log directory"
         (values))))
   (setf *log-directory* log-directory)
-  (bind ((standard-logger (find-logger 'standard-logger)))
-    (setf (hu.dwim.logger::appenders-of standard-logger)
+  (bind ((root-logger (find-logger 'root-logger)))
+    (setf (hu.dwim.logger::appenders-of root-logger)
           (list (make-level-filtering-appender +warn+ (make-thread-safe-file-appender "error.log"))
                 (make-thread-safe-file-appender "root.log")))
-    (setf (log-level standard-logger) +info+)))
+    (setf (log-level root-logger) +info+)))
