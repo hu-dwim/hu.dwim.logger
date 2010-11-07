@@ -54,7 +54,8 @@
    (appenders nil :documentation "A list of appender objects this logger should send messages to.")
    (runtime-level nil :type (or null integer) :documentation "The runtime log level determines whether an actual log message shows up at runtime.")
    (compile-time-level nil :type integer :documentation "The compile time log level is a compile time filter. Log expressions below this level will macro-expand to NIL at compile time.")
-   (name)))
+   (name)
+   (documentation nil)))
 
 (def method make-load-form ((self logger) &optional env)
   (declare (ignore env))
@@ -258,7 +259,8 @@
                ,(when compile-time-level
                       `(setf (compile-time-level-of ,logger) ,compile-time-level))
                (setf (appenders-of ,logger) (remove nil (list ,@appenders)))
-               (setf (parents-of ,logger) (list ,@parents))))
+               (setf (parents-of ,logger) (list ,@parents))
+               (setf (documentation-of ,logger) ,documentation)))
            ,(make-log-helper '#:dribble '+dribble+)
            ,(make-log-helper '#:debug '+debug+)
            ,(make-log-helper '#:info '+info+)
