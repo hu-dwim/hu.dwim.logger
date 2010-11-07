@@ -213,8 +213,7 @@
           (make '#:fatal))))
 
 (def (macro e) deflogger (name parents &key compile-time-level runtime-level appender appenders documentation)
-  (declare (ignore documentation)
-           (type symbol name))
+  (check-type name logger-name)
   (unless (eq (symbol-package name) *package*)
     (simple-style-warning "When defining a logger named ~A, the home package of the symbol is not *package* (not (eq ~A ~A))"
                           (fully-qualified-symbol-name name)
@@ -225,7 +224,7 @@
                                `(or (find-logger ',parent :otherwise #f)
                                     (error "Attempt to define a sub-logger of the undefined logger ~S." ',parent)))
                              parents)
-                     (unless (eq name 'standard-logger)
+                     (unless (eq name 'standard-logger) ; special case the chicken-egg issue at the definition of the root logger
                        '((find-logger 'standard-logger))))))
     (flet ((make-log-helper (suffix level)
              (let ((logger-macro-name (format-symbol (symbol-package name) "~A.~A" (symbol-name name) (symbol-name suffix))))
