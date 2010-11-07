@@ -18,8 +18,6 @@
 
 (def (constant e :test 'equalp) +log-level-names+ #(+dribble+ +debug+ +info+ +warn+ +error+ +fatal+))
 
-(def (special-variable e) *default-compile-time-level* (if *load-as-production?* +debug+ +dribble+))
-
 (def type logger-name ()
   `(and symbol
         (not (eql t))
@@ -55,7 +53,7 @@
    (children nil :documentation "The loggers which inherit from this logger.")
    (appenders nil :documentation "A list of appender objects this logger should send messages to.")
    (runtime-level nil :type (or null integer) :documentation "The runtime log level determines whether an actual log message shows up at runtime.")
-   (compile-time-level *default-compile-time-level* :type integer :documentation "The compile time log level is a compile time filter. Log expressions below this level will macro-expand to NIL at compile time.")
+   (compile-time-level nil :type integer :documentation "The compile time log level is a compile time filter. Log expressions below this level will macro-expand to NIL at compile time.")
    (name)))
 
 (def method make-load-form ((self logger) &optional env)
@@ -250,6 +248,7 @@
              (unless (find-logger ',name :otherwise #f)
                (setf (find-logger ',name) (make-instance 'logger
                                                          :name ',name
+                                                         :parents (list ,@parents)
                                                          ,@(when compile-time-level
                                                                  `(:compile-time-level ,compile-time-level))))))
            (eval-when (:load-toplevel :execute)
