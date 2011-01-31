@@ -11,7 +11,7 @@
 (defsystem :hu.dwim.logger.documentation
   :class hu.dwim.documentation-system
   :depends-on (:hu.dwim.logger.test
-               :hu.dwim.wui)
+               :hu.dwim.presentation)
   :components ((:module "documentation"
                 :components ((:file "logger" :depends-on ("package"))
                              (:file "package")))))
