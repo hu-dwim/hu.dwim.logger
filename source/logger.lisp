@@ -53,7 +53,7 @@
    (children nil :documentation "The loggers which inherit from this logger.")
    (appenders nil :documentation "A list of appender objects this logger should send messages to.")
    (runtime-level nil :type (or null integer) :documentation "The runtime log level determines whether an actual log message shows up at runtime.")
-   (compile-time-level nil :type integer :documentation "The compile time log level is a compile time filter. Log expressions below this level will macro-expand to NIL at compile time.")
+   (compile-time-level nil :type (or null integer) :documentation "The compile time log level is a compile time filter. Log expressions below this level will macro-expand to NIL at compile time.")
    (name)
    (documentation nil)))
 
