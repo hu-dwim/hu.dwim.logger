@@ -68,7 +68,7 @@
 
 (def (special-variable e) *log-directory*)
 
-(def (class* e) file-appender (stream-appender)
+(def (class* e) file-appender (appender)
   ((log-file :documentation "Name of the file to write log messages to."))
   (:documentation "Logs to a file."))
 
@@ -89,7 +89,7 @@
         (-with-macro/body- (stream stream-var-name)))
       (return))))
 
-(def method append-message :around ((logger logger) (appender file-appender) level message-control message-arguments)
+(def method append-message ((logger logger) (appender file-appender) level message-control message-arguments)
   (with-output-to-file-appender-file (output appender)
     (format-message logger appender (formatter-of appender) level output message-control message-arguments)))
 
