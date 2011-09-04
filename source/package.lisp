@@ -11,4 +11,5 @@
         :hu.dwim.common
         :hu.dwim.def
         :hu.dwim.util)
+  (:shadow #:formatter)
   (:readtable-setup (hu.dwim.util:enable-standard-hu.dwim-syntaxes)))

@@ -22,7 +22,8 @@
                :trivial-garbage)
   :components ((:module "source"
                 :components ((:file "api" :depends-on ("package"))
-                             (:file "appender" :depends-on ("logger" "api"))
+                             (:file "appender" :depends-on ("api" "formatter" "logger"))
+                             (:file "formatter" :depends-on ("api" "logger"))
                              (:file "logger" :depends-on ("api"))
                              (:file "package")
                              (:file "root-logger" :depends-on ("logger" "api" "appender"))))))

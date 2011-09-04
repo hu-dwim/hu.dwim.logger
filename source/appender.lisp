@@ -17,8 +17,6 @@
 ;;;;;;
 ;;; Stream appender
 
-(def constant +max-logger-name-length+ 15)
-
 (def (class* e) stream-appender (appender)
   ((stream '*standard-output*))
   (:documentation "Human readable logger."))
@@ -32,21 +30,18 @@
 (def print-object stream-appender
   (prin1 (slot-value -self- 'stream)))
 
-(def method make-instance ((class (eql (find-class 'stream-appender))) &rest initargs)
-  (declare (ignore initargs))
-  (error "STREAM-APPENDER is an abstract class. You must use either BRIEF-STREAM-APPENDER or VERBOSE-STREAM-APPENDER objects."))
-
 (def (function e) make-stream-appender (&rest args &key (stream '*standard-output*) (verbosity 2) &allow-other-keys)
   (check-type verbosity number)
   (remove-from-plistf args :stream :verbosity)
-  (apply #'make-instance (case verbosity
-                           ((0 1) 'brief-stream-appender)
-                           (t 'verbose-stream-appender))
+  (apply #'make-instance 'stream-appender
+         :formatter (case verbosity
+                      ((0 1) (make-instance 'brief-formatter))
+                      (t (make-instance 'verbose-formatter)))
          :stream stream
          args))
 
 (def method append-message (logger (appender stream-appender) level message-control message-arguments)
-  (format-message logger appender level (stream-of appender) message-control message-arguments))
+  (format-message logger appender (formatter-of appender) level (stream-of appender) message-control message-arguments))
 
 (def method append-message :around ((logger logger) (appender stream-appender) level message-control message-arguments)
   (restart-case
@@ -69,68 +64,13 @@
       (setf (stream-of appender) (make-broadcast-stream)))))
 
 ;;;;;;
-;;; brief-stream-appender
-
-(def (class* e) brief-stream-appender (stream-appender)
-  ((last-message-year :initform 0)
-   (last-message-month :initform 0)
-   (last-message-day :initform 0))
-  (:documentation "A subclass of STREAM-APPENDER with minimal overhead text in messages. This amounts to: not printing the package names of loggers and log levels and a more compact printing of the current time."))
-
-(def method format-message ((logger logger) (appender brief-stream-appender) level stream message-control message-arguments)
-  (local-time:with-decoded-timestamp (:minute minute :hour hour :day day :month month :year year)
-      (local-time:now)
-    (with-slots (last-message-year last-message-month last-message-day) appender
-      (unless (and (= year last-message-year)
-                   (= month last-message-month)
-                   (= day last-message-day))
-        (format stream "--TIME MARK ~4,'0D-~2,'0D-~2,'0D--~%"
-                year month day)
-        (setf last-message-year year
-              last-message-month month
-              last-message-day day)))
-    (bind ((logger-name (symbol-name (name-of *toplevel-logger*)))
-           (logger-name-length (length logger-name))
-           (level-name (symbol-name level)))
-      (format stream
-              #.(concatenate 'string
-                             "~2,'0D:~2,'0D ~2A ~"
-                             (princ-to-string +max-logger-name-length+)
-                             "@A ~7A ")
-              hour minute
-              (human-readable-thread-id)
-              (subseq logger-name
-                      (max 0 (- logger-name-length
-                                +max-logger-name-length+))
-                      logger-name-length)
-              (subseq level-name 1 (1- (length level-name)))))
-    (format-or-write-string stream message-control message-arguments)
-    (terpri stream)))
-
-;;;;;;
-;;; verbose-stream-appender
-
-(def (class* e) verbose-stream-appender (stream-appender)
-  ()
-  (:documentation "A subclass of STREAM-APPENDER which attempts to be as precise as possible, logger names and log level names are printed with a package prefix and the time is printed in long format."))
-
-(def method format-message ((logger logger) (appender verbose-stream-appender) level stream message-control message-arguments)
-  (format stream
-          "~A ~S ~S: "
-          (local-time:now)
-          (logger-name-for-output *toplevel-logger*)
-          level)
-  (format-or-write-string stream message-control message-arguments)
-  (terpri stream))
-
-;;;;;;
 ;;; File appender
 
 (def (special-variable e) *log-directory*)
 
 (def (class* e) file-appender (stream-appender)
   ((log-file :documentation "Name of the file to write log messages to."))
-  (:documentation "Logs to a file. The output of the file logger is not meant to be read directly by a human."))
+  (:documentation "Logs to a file."))
 
 (def print-object file-appender
   (prin1 (file-appender-output-file -self-)))
@@ -149,26 +89,12 @@
         (-with-macro/body- (stream stream-var-name)))
       (return))))
 
-(def method append-message ((logger logger) (appender file-appender) level message-control message-arguments)
+(def method append-message :around ((logger logger) (appender file-appender) level message-control message-arguments)
   (with-output-to-file-appender-file (output appender)
-    (format-message logger appender level output message-control message-arguments)))
+    (format-message logger appender (formatter-of appender) level output message-control message-arguments)))
 
-(def method format-message ((logger logger) (appender file-appender) level stream message-control message-arguments)
-  (bind ((*package* #.(find-package :hu.dwim.logger)))
-    (local-time:format-rfc3339-timestring stream (local-time:now))
-    (format stream " ~3S ~9S ~A "
-            (human-readable-thread-id)
-            level
-            (logger-name-for-output *toplevel-logger*))
-    (write-char #\❲ stream)
-    (format-or-write-string stream message-control message-arguments)
-    (write-char #\❳ stream)
-    (format stream " ~S~%"
-            ;; TODO this should eventually be replaced with some smartness coming from with-activity
-            (bordeaux-threads:thread-name (bordeaux-threads:current-thread)))))
-
-(def (function e) make-file-appender (file-name)
-  (make-instance 'file-appender :log-file file-name))
+(def (function e) make-file-appender (file-name &key (formatter (make-instance 'parsable-formatter)))
+  (make-instance 'file-appender :log-file file-name :formatter formatter))
 
 ;;;;;;
 ;;; Level filter appender
@@ -203,7 +129,9 @@
    (last-flushed-at (get-monotonic-time))
    (cache (make-array +caching-appender/maximum-cache-size+ :adjustable #f :fill-pointer 0))
    (async-flushing #f :accessor async-flushing? :type boolean
-                   :documentation "Will some external entity regularly call FLUSH-CACHING-APPENDER on us?")))
+                   :documentation "Is it ok to call FLUSH-CACHING-APPENDER-MESSAGES without holding the appender lock?")
+   (lazy-flushing #t :accessor lazy-flushing? :type boolean
+                  :documentation "If an external entity regularly call FLUSH-CACHING-APPENDER on us, then we may be lazy flushing.")))
 
 (def constructor caching-appender
   (setf (find-caching-appender -self-) -self-))
@@ -246,21 +174,40 @@
   (values))
 
 (def method append-message ((logger logger) (appender caching-appender) level message-control message-arguments)
-  (bind ((formatted-message (format-message logger appender level nil message-control message-arguments)))
+  (bind ((formatted-message (format-message logger appender (formatter-of appender) level nil message-control message-arguments)))
     (with-lock-held-on-caching-appender appender
       (bind ((cache (cache-of appender)))
         (vector-push-extend formatted-message cache)
-        (when (>= (length cache) (array-dimension cache 0))
+        (when (or (not (lazy-flushing? appender))
+                  (>= (length cache)
+                      (array-dimension cache 0)))
           (flush-caching-appender appender)
           ;; we have the lock, so it must be empty here
           (assert (zerop (length cache))))))))
 
 ;;;;;;
+;;; thread safe stream appender
+
+(def (class* e) thread-safe-stream-appender (caching-appender stream-appender)
+  ())
+
+(def method flush-caching-appender-messages ((appender thread-safe-stream-appender) lines)
+  (loop
+    :with stream = (stream-of appender)
+    :for line :across lines
+    :do (write-string line stream))
+  (values))
+
+(def (function e) make-thread-safe-stream-appender (stream &key (formatter (make-instance 'brief-formatter))
+                                                           (lazy-flushing #f))
+  (check-type stream (or stream symbol))
+  (make-instance 'thread-safe-stream-appender :stream stream :formatter formatter :lazy-flushing lazy-flushing))
+
+;;;;;;
 ;;; thread safe file appender
 
 (def (class* e) thread-safe-file-appender (caching-appender file-appender)
-  ()
-  (:default-initargs :async-flushing #f))
+  ())
 
 (def method flush-caching-appender-messages ((appender thread-safe-file-appender) lines)
   (with-output-to-file-appender-file (output appender)
@@ -269,5 +216,6 @@
       :do (write-string line output)))
   (values))
 
-(def (function e) make-thread-safe-file-appender (file-name)
-  (make-instance 'thread-safe-file-appender :log-file file-name))
+(def (function e) make-thread-safe-file-appender (file-name &key (formatter (make-instance 'parsable-formatter)))
+  (check-type file-name (or string pathname))
+  (make-instance 'thread-safe-file-appender :log-file file-name :formatter formatter))
