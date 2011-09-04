@@ -36,18 +36,17 @@
   (declare (ignore initargs))
   (error "STREAM-APPENDER is an abstract class. You must use either BRIEF-STREAM-APPENDER or VERBOSE-STREAM-APPENDER objects."))
 
+(def (function e) make-stream-appender (&rest args &key (stream '*standard-output*) (verbosity 2) &allow-other-keys)
+  (check-type verbosity number)
+  (remove-from-plistf args :stream :verbosity)
+  (apply #'make-instance (case verbosity
+                           ((0 1) 'brief-stream-appender)
+                           (t 'verbose-stream-appender))
+         :stream stream
+         args))
+
 (def method append-message (logger (appender stream-appender) level message-control message-arguments)
   (format-message logger appender level (stream-of appender) message-control message-arguments))
-
-(def (class* e) brief-stream-appender (stream-appender)
-  ((last-message-year :initform 0)
-   (last-message-month :initform 0)
-   (last-message-day :initform 0))
-  (:documentation "A subclass of STREAM-APPENDER with minimal overhead text in messages. This amounts to: not printing the package names of loggers and log levels and a more compact printing of the current time."))
-
-(def (class* e) verbose-stream-appender (stream-appender)
-  ()
-  (:documentation "A subclass of STREAM-APPENDER which attempts to be as precise as possible, logger names and log level names are printed with a package prefix and the time is printed in long format."))
 
 (def method append-message :around ((logger logger) (appender stream-appender) level message-control message-arguments)
   (restart-case
@@ -68,6 +67,15 @@
       :report (lambda (stream)
                 (format stream "Set the output stream of ~A (invoked through ~A) to a deadend" appender *toplevel-logger*))
       (setf (stream-of appender) (make-broadcast-stream)))))
+
+;;;;;;
+;;; brief-stream-appender
+
+(def (class* e) brief-stream-appender (stream-appender)
+  ((last-message-year :initform 0)
+   (last-message-month :initform 0)
+   (last-message-day :initform 0))
+  (:documentation "A subclass of STREAM-APPENDER with minimal overhead text in messages. This amounts to: not printing the package names of loggers and log levels and a more compact printing of the current time."))
 
 (def method format-message ((logger logger) (appender brief-stream-appender) level stream message-control message-arguments)
   (local-time:with-decoded-timestamp (:minute minute :hour hour :day day :month month :year year)
@@ -99,6 +107,13 @@
     (format-or-write-string stream message-control message-arguments)
     (terpri stream)))
 
+;;;;;;
+;;; verbose-stream-appender
+
+(def (class* e) verbose-stream-appender (stream-appender)
+  ()
+  (:documentation "A subclass of STREAM-APPENDER which attempts to be as precise as possible, logger names and log level names are printed with a package prefix and the time is printed in long format."))
+
 (def method format-message ((logger logger) (appender verbose-stream-appender) level stream message-control message-arguments)
   (format stream
           "~A ~S ~S: "
@@ -107,15 +122,6 @@
           level)
   (format-or-write-string stream message-control message-arguments)
   (terpri stream))
-
-(def (function e) make-stream-appender (&rest args &key (stream '*standard-output*) (verbosity 2) &allow-other-keys)
-  (check-type verbosity number)
-  (remove-from-plistf args :stream :verbosity)
-  (apply #'make-instance (case verbosity
-                           ((0 1) 'brief-stream-appender)
-                           (t 'verbose-stream-appender))
-         :stream stream
-         args))
 
 ;;;;;;
 ;;; File appender
@@ -196,7 +202,8 @@
   ((lock (bordeaux-threads:make-lock "a caching-appender of hu.dwim.logger"))
    (last-flushed-at (get-monotonic-time))
    (cache (make-array +caching-appender/maximum-cache-size+ :adjustable #f :fill-pointer 0))
-   (async-flushing #f :accessor async-flushing? :type boolean)))
+   (async-flushing #f :accessor async-flushing? :type boolean
+                   :documentation "Will some external entity regularly call FLUSH-CACHING-APPENDER on us?")))
 
 (def constructor caching-appender
   (setf (find-caching-appender -self-) -self-))
