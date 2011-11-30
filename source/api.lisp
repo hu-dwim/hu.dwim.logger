@@ -24,3 +24,8 @@
 
 (def class* formatter ()
   ())
+
+(def (function e) log-to-console (format-control &rest format-arguments)
+  (apply 'format *standard-output* format-control format-arguments)
+  (terpri *standard-output*)
+  (finish-output *standard-output*))
