@@ -21,7 +21,7 @@
 \(def logger my-logger ()
   :runtime-level +info+
   :compile-time-level +debug+
-  :appenders ((make-instance 'brief-stream-appender)))
+  :appenders ((make-thread-safe-stream-appender '*standard-output*)))
 
 It will define 6 macros, each called MY-LOGGER.{level} for each of the 6 log levels. These macros act similarly to CL:FORMAT with a few exceptions:
  - they don't take a first destination argument
@@ -32,8 +32,8 @@ It will define 6 macros, each called MY-LOGGER.{level} for each of the 6 log lev
 
 The log messages are handled by the so called appenders. Each logger can have a list of appenders. Through the parent chain of the logger, each appender of each parent also receives the log message.
 
-The logger called ROOT-LOGGER is implicitly becomes a parent of all loggers, so having a single appender on it catches all log messages. If the codebase is loaded with debug settings (see the global varaible called *LOAD-AS-PRODUCTION?*) then it will have a BRIEF-STREAM-APPENDER directed to *STANDARD-OUTPUT*.
+The logger called ROOT-LOGGER is implicitly becomes a parent of all loggers, so having a single appender on it catches all log messages. If the codebase is loaded with debug settings (see the global varaible called *LOAD-AS-PRODUCTION?*) then it will have a (MAKE-THREAD-SAFE-STREAM-APPENDER '*STANDARD-OUTPUT*).
 
-BRIEF-STREAM-APPENDER and VERBOSE-STREAM-APPENDER are simple stream appenders that write to their target stream, *STANDARD-OUTPUT* by default.
+STREAM-APPENDER is a simple stream appender that writes to its target stream, *STANDARD-OUTPUT* by default.
 
 THREAD-SAFE-FILE-APPENDER can be used from multiple threads because it caches messages protected by a lock and can flush messages from a timer (also protected by a lock, so the file contents will not be cluttered by overlapping writes from multiple threads).")))
