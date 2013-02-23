@@ -17,8 +17,7 @@
                :hu.dwim.defclass-star+hu.dwim.def
                :hu.dwim.util
                :hu.dwim.util.threads
-               :local-time
-               :trivial-garbage)
+               :local-time)
   :components ((:module "source"
                 :components ((:file "api" :depends-on ("package"))
                              (:file "appender" :depends-on ("api" "formatter" "logger"))
