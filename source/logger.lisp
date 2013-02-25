@@ -212,8 +212,10 @@
           (make '#:error)
           (make '#:fatal))))
 
-(def (macro e) deflogger (name parents &key compile-time-level runtime-level appender appenders documentation)
+(def (macro e) deflogger (name parents &key accessor-name-prefix compile-time-level runtime-level appender appenders documentation)
   (check-type name logger-name)
+  (unless accessor-name-prefix
+    (setf accessor-name-prefix (string+ (symbol-name name) ".")))
   (unless (eq (symbol-package name) *package*)
     (simple-style-warning "When defining a logger named ~A, the home package of the symbol is not *package* (not (eq ~A ~A))"
                           (fully-qualified-symbol-name name)
@@ -227,7 +229,7 @@
                      (unless (eq name 'root-logger) ; special case the chicken-egg issue at the definition of the root logger
                        '((find-logger 'root-logger))))))
     (flet ((make-log-helper (suffix level)
-             (let ((logger-macro-name (format-symbol (symbol-package name) "~A.~A" (symbol-name name) (symbol-name suffix))))
+             (let ((logger-macro-name (format-symbol (symbol-package name) "~A~A" (string accessor-name-prefix) (symbol-name suffix))))
                `(progn
                   (setf (get ',logger-macro-name 'logger) ',name)
                   (def macro ,logger-macro-name (message-control &rest message-args)
@@ -268,9 +270,10 @@
            ,(make-log-helper '#:fatal '+fatal+)
            (values))))))
 
-(def (definer e :available-flags "e") logger (name parents &key compile-time-level runtime-level appender appenders documentation)
+(def (definer e :available-flags "e") logger (name parents &key accessor-name-prefix compile-time-level runtime-level appender appenders documentation)
   `(progn
      (deflogger ,name ,parents
+       :accessor-name-prefix ,accessor-name-prefix
        :runtime-level ,runtime-level
        :compile-time-level ,compile-time-level
        :appender ,appender
