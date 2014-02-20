@@ -14,4 +14,4 @@
           (return (values it t)))))))
 
 (when (boundp 'swank::*inspector-lookup-hooks*)
-  (pushnew 'logger-lookup-hook swank::*inspector-lookup-hooks*))
+  (pushnew 'logger-lookup-hook (symbol-value 'swank::*inspector-lookup-hooks*)))
