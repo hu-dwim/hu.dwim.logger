@@ -135,7 +135,8 @@
                   :documentation "If an external entity regularly call FLUSH-CACHING-APPENDER on us, then we may be lazy flushing.")))
 
 (def constructor caching-appender
-  (setf (find-caching-appender -self-) nil))
+  ;; setf'ing nil here would mean we want the entry removed.
+  (setf (find-caching-appender -self-) t))
 
 (def with-macro with-lock-held-on-caching-appender (appender)
   (bordeaux-threads:with-recursive-lock-held ((lock-of appender))
