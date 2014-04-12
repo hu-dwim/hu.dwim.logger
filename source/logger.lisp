@@ -85,6 +85,7 @@
   (log-level/runtime logger))
 
 (def function (setf log-level) (new-value logger)
+  (setf (log-level/compile-time logger) new-value)
   (setf (log-level/runtime logger) new-value))
 
 (def (function e) log-level/runtime (logger)
