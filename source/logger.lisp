@@ -18,6 +18,8 @@
 
 (def (constant e :test 'equalp) +log-level-names+ #(+dribble+ +debug+ +info+ +warn+ +error+ +fatal+))
 
+(def (constant e :test 'eq) +log-level-keywords+ '(:dribble :debug :info :warn :error :fatal))
+
 (def type logger-name ()
   `(and symbol
         (not (eql t))
@@ -85,8 +87,29 @@
   (log-level/runtime logger))
 
 (def function (setf log-level) (new-value logger)
+  (when (keywordp new-value)
+    (setf new-value (search (list new-value) +log-level-keywords+)))
   (setf (log-level/compile-time logger) new-value)
   (setf (log-level/runtime logger) new-value))
+
+;; convenience functions
+(def (function e) log-level-dribble (logger)
+  (setf (log-level logger) +dribble+))
+
+(def (function e) log-level-debug (logger)
+  (setf (log-level logger) +debug+))
+
+(def (function e) log-level-info (logger)
+  (setf (log-level logger) +info+))
+
+(def (function e) log-level-warn (logger)
+  (setf (log-level logger) +warn+))
+
+(def (function e) log-level-error (logger)
+  (setf (log-level logger) +error+))
+
+(def (function e) log-level-fatal (logger)
+  (setf (log-level logger) +fatal+))
 
 (def (function e) log-level/runtime (logger)
   (if (symbolp logger)
