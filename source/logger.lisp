@@ -20,6 +20,9 @@
 
 (def (constant e :test 'equalp) +log-level-keywords+ '(:dribble :debug :info :warn :error :fatal))
 
+(def type log-level ()
+  `(integer ,+dribble+ ,+fatal+))
+
 (def type logger-name ()
   `(and symbol
         (not (eql t))
@@ -87,29 +90,22 @@
   (log-level/runtime logger))
 
 (def function (setf log-level) (new-value logger)
-  (when (keywordp new-value)
-    (setf new-value (search (list new-value) +log-level-keywords+)))
   (setf (log-level/compile-time logger) new-value)
-  (setf (log-level/runtime logger) new-value))
+  (setf (log-level/runtime logger) new-value)
+  new-value)
 
-;; convenience functions
-(def (function e) log-level-dribble (logger)
-  (setf (log-level logger) +dribble+))
+(def (function e) set-log-level (logger level)
+  (setf (log-level logger) level)
+  level)
 
-(def (function e) log-level-debug (logger)
-  (setf (log-level logger) +debug+))
-
-(def (function e) log-level-info (logger)
-  (setf (log-level logger) +info+))
-
-(def (function e) log-level-warn (logger)
-  (setf (log-level logger) +warn+))
-
-(def (function e) log-level-error (logger)
-  (setf (log-level logger) +error+))
-
-(def (function e) log-level-fatal (logger)
-  (setf (log-level logger) +fatal+))
+(def function validate-log-level (value)
+  (etypecase value
+    (log-level
+     value)
+    (keyword
+     (or (find value +log-level-keywords+ :test 'eq)
+         (cerror "Use +INFO+ instead" "~S is not a valid log level keyword" value)
+         +info+))))
 
 (def (function e) log-level/runtime (logger)
   (if (symbolp logger)
@@ -122,6 +118,7 @@
               (error "Can't determine runtime level for ~S" logger)))))
 
 (def function (setf log-level/runtime) (new-level logger &key recursive)
+  (setf new-level (validate-log-level new-level))
   (if (symbolp logger)
       (setf (log-level/runtime (find-logger logger) :recursive recursive) new-level)
       (progn
@@ -149,6 +146,7 @@
               (error "Can't determine compile-time level for ~S" logger)))))
 
 (def function (setf log-level/compile-time) (new-level logger &key recursive)
+  (setf new-level (validate-log-level new-level))
   (if (symbolp logger)
       (setf (log-level/compile-time (find-logger logger) :recursive recursive) new-level)
       (progn
