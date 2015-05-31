@@ -18,7 +18,7 @@
 
 (def (constant e :test 'equalp) +log-level-names+ #(+dribble+ +debug+ +info+ +warn+ +error+ +fatal+))
 
-(def (constant e :test 'eq) +log-level-keywords+ '(:dribble :debug :info :warn :error :fatal))
+(def (constant e :test 'equalp) +log-level-keywords+ '(:dribble :debug :info :warn :error :fatal))
 
 (def type logger-name ()
   `(and symbol
