@@ -152,7 +152,7 @@
       (block flushing
         (handler-bind
             ((serious-condition (lambda (error)
-                                  (note-logging-error error appender)
+                                  (note-logging-error error :context appender)
                                   (return-from flushing))))
           (flush-caching-appender appender))))))
 

@@ -189,11 +189,11 @@
 (def (special-variable :documentation "While inside HANDLE-LOG-MESSAGE, this variable is bound to the logger on which HANDLE-LOG-MESSAGE was called first, ignoring logger inheritance and handler delegation.")
   *toplevel-logger*)
 
-(def function note-logging-error (error &optional context)
+(def function note-logging-error (error &key context message-control message-arguments)
   (maybe-invoke-debugger error :context context)
   ;; NOTE don't use ~A, we don't want errors from print-object to interfere when printing the warning...
-  (warn "Ignoring the following error coming from ~S: ~S. For more information see ~S and/or ~S."
-        'handle-log-message error '*debug-on-error* 'debug-on-error?))
+  (warn "Ignoring the following error coming from ~S: ~S. The context is ~S, the relevant log message is ~S, the arguments were ~S. For more information see ~S and/or ~S. "
+        'handle-log-message error context message-control message-arguments '*debug-on-error* 'debug-on-error?))
 
 (def function call-handle-log-message (logger level message-control message-arguments)
   ;; TODO add details on why it's a problem or just delete this assert. comes up from audit log opening transactions...
@@ -212,7 +212,7 @@
       ;; infrastructure are masked here.
       (handler-bind
           ((serious-condition (lambda (error)
-                                (note-logging-error error logger)
+                                (note-logging-error error :context logger :message-control message-control :message-arguments message-arguments)
                                 (throw 'unwind-call-handle-log-message (values)))))
         (with-logging-io
           (handle-log-message logger level message-control message-arguments)))))
