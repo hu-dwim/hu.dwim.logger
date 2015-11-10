@@ -13,7 +13,7 @@
                :hu.dwim.def+hu.dwim.common
                :hu.dwim.defclass-star+hu.dwim.def
                :hu.dwim.util
-               :hu.dwim.util.threads
+               :hu.dwim.util/threads
                :local-time)
   :components ((:module "source"
                 :components ((:file "api" :depends-on ("package"))
