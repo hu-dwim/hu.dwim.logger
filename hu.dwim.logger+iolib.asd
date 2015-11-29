@@ -8,5 +8,5 @@
   :defsystem-depends-on (:hu.dwim.asdf)
   :class "hu.dwim.asdf:hu.dwim.system"
   :depends-on (:hu.dwim.logger
-               ;; we force loading hu.dwim.util+iolib to redefine get-monotonic-time with a proper one from iolib
+               ;; we force the loading of hu.dwim.util+iolib to redefine GET-MONOTONIC-TIME with a proper one from iolib
                :hu.dwim.util+iolib))
