@@ -7,8 +7,8 @@
 (in-package :hu.dwim.logger)
 
 (def (logger e) root-logger ()
-  :runtime-level (if *load-as-production?* +info+ +debug+)
-  :compile-time-level (if *load-as-production?* +debug+ +dribble+)
+  :runtime-level      (or (production-only +info+) +debug+)
+  :compile-time-level (or (production-only +info+) +dribble+)
   :appenders ((debug-only* (make-thread-safe-stream-appender '*debug-io*)))
   :documentation "This logger will be the direct parent of newly defined loggers, unless otherwise specified in the DEFLOGGER form. The consequence of this is that each logger will be the predecessor of this logger.")
 
