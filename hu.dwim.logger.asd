@@ -9,7 +9,7 @@
   :class "hu.dwim.asdf:hu.dwim.system"
   :description "Generic purpose logger utility."
   :depends-on (:bordeaux-threads
-               :hu.dwim.def.namespace
+               :hu.dwim.def/namespace
                :hu.dwim.def+hu.dwim.common
                :hu.dwim.defclass-star+hu.dwim.def
                :hu.dwim.util
