@@ -6,6 +6,15 @@
 
 (provide 'hu.dwim.logger)
 
+;; TODO make it work when the (log.debug ...) sexp is multiline (it's not trivial).
+;; https://stackoverflow.com/questions/9452615/emacs-is-there-a-clear-example-of-multi-line-font-locking
+;; https://www.emacswiki.org/emacs/MultilineRegexp
+;; use rx macro instead of regex
+;; to test matching:
+;;  (progn
+;;  (setq-local font-lock-keywords '(("\\(Operations:\\)\\s-*\\(.*\\)$" (2 font-lock-keyword-face))))
+;;  (font-lock-fontify-buffer))
+
 ;; usage example in your init.el:
 ;; (setq dwim-workspace (getenv "DWIM_WORKSPACE"))
 ;; (add-to-list 'load-path (expand-file-name (concat dwim-workspace "/hu.dwim.logger/emacs/")))
